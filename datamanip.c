@@ -50,11 +50,18 @@ Result finalizeDataManipModule()
 static int getRecordSize(TableInfo *tableInfo)
 {
     int total = 0;
+    int i;
 
-    for (フィールド数分だけループする) {
+    for (i = 0; i < tableInfo.numField; i++) {
         /* i番目のフィールドがINT型かSTRING型か調べる */
-        /* INT型ならtotalにsizeof(int)を加算 */
-        /* STRING型ならtotalにMAX_STRINGを加算 */
+        if (tableInfo.fieldInfo[i].dataType==TYPE_INTEGER){
+          /* INT型ならtotalにsizeof(int)を加算 */
+          total += sizeof(int);
+        }else if (tableInfo.fieldInfo[i].dataType==TYPE_STRING){
+          /* STRING型ならtotalにMAX_STRINGを加算 */
+          total += sizeof(MAX_STRING)
+        }
+      
     }
 
     /* フラグの分の1を足す */
@@ -76,9 +83,11 @@ static int getRecordSize(TableInfo *tableInfo)
 Result insertRecord(char *tableName, RecordData *recordData)
 {
     TableInfo *tableInfo;
-    int numPage;
+    int numPage,len;
     char *record;
+    char *filename;
     char *p;
+    char page[PAGE_SIZE]={0};
 
     /* テーブルの情報を取得する */
     if ((tableInfo = getTableInfo(tableName)) == NULL) {
@@ -101,21 +110,21 @@ Result insertRecord(char *tableName, RecordData *recordData)
 
     /* 確保したメモリ領域に、フィールド数分だけ、順次データを埋め込む */
     for (i = 0; i < tableInfo->numField; i++) {
-  switch (tableInfo->fieldInfo[i].dataType) {
-  case TYPE_INTEGER:
-      memcpy(p, ......);
-      p += ...;
-      break;
-  case TYPE_STRING:
-      memcpy(p, ......);
-      p += ......;
-      break;
-  default:
-      /* ここにくることはないはず */
+      switch (tableInfo->fieldInfo[i].dataType) {
+        case TYPE_INTEGER:
+          memcpy(p, recordData.fieldData.intValue, sizeof(int));
+          p += sizeof(int);
+          break;
+        case TYPE_STRING:
+          memcpy(p, recordData.fieldData.stringValue, MAX_STRING);
+          p += MAX_STRING;
+        break;
+        default:
+          /* ここにくることはないはず */
             freeTableInfo(tableInfo);
             free(record);
-      return NG;
-  }
+            return NG;
+      }
     }
 
     /* 使用済みのtableInfoデータのメモリを解放する */
@@ -125,45 +134,60 @@ Result insertRecord(char *tableName, RecordData *recordData)
      * ここまでで、挿入するレコードの情報を埋め込んだバイト列recordができあがる
      */
 
+
+    /* [tableName].defという文字列を作る */
+    len = strlen(tableName) + strlen(DEF_FILE_EXT) + 1;
+    if ((filename = malloc(len)) == NULL) {
+      return NG;
+    }
+    snprintf(filename, len, "%s%s", tableName, DEF_FILE_EXT);
+
     /* データファイルをオープンする */
-    ......
+    if ((file = openFile(filename)) == NULL) {
+      return NG;
+    }
 
     /* データファイルのページ数を調べる */
-    numPage = ......;
+    numPage = getNumPages(filename);
 
     /* レコードを挿入できる場所を探す */
     for (i = 0; i < numPage; i++) {
         /* 1ページ分のデータを読み込む */
         if (readPage(file, i, page) != OK) {
-            free(record);
-      return NG;
-  }
+          free(record);
+          return NG;
+        }
 
-        /* pageの先頭からrecordSizeバイトずつ飛びながら、先頭のフラグが「0」(未使用)の場所を探す */
+      /* pageの先頭からrecordSizeバイトずつ飛びながら、先頭のフラグが「0」(未使用)の場所を探す */
         for (j = 0; j < (PAGE_SIZE / recordSize); j++) {
-      char *q;
-      q = ......;
-      if (*q == 0) {
-    /* 見つけた空き領域に上で用意したバイト列recordを埋め込む */
-    memcpy(q, ......);
+          char *q;
+          q = j*recordSize;
+          if (*q == 0) {
+            /* 見つけた空き領域に上で用意したバイト列recordを埋め込む */
+            memcpy(q, record, recordSize);
 
-    /* ファイルに書き戻す */
-    if (writePage(file, i, page) != OK) {
-                    free(record);
-        return NG;
-    }
-    closeFile(file);
-                free(record);
-    return OK;
-      }
-  }
+            /* ファイルに書き戻す */
+            if (writePage(file, i, page) != OK) {
+              free(record);
+              return NG;
+            }
+            closeFile(file);
+            free(record);
+            return OK;
+          }
+        }
     }
 
     /*
      * ファイルの最後まで探しても未使用の場所が見つからなかったら
      * ファイルの最後に新しく空のページを用意し、そこに書き込む
      */
-    ......
+
+    memset(page, record, recordSize);
+    if (writePage(file, i, page) != OK) {
+      free(record);
+      return NG;
+    }
 
     free(record);
     return OK;

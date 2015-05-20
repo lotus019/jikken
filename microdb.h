@@ -76,8 +76,7 @@ typedef struct FieldData FieldData;
 struct FieldData {
     char name[MAX_FIELD_NAME];    /* フィールド名 */
     DataType dataType;      /* フィールドのデータ型 */
-    int intValue;     /* integer型の場合の値 */
-    char stringValue[MAX_STRING]; /* string型の場合の値 */
+    ValueSet valueSet; /*データを納める共用体*/
 };
 
 /*

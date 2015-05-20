@@ -112,11 +112,11 @@ Result insertRecord(char *tableName, RecordData *recordData)
     for (i = 0; i < tableInfo->numField; i++) {
       switch (tableInfo->fieldInfo[i].dataType) {
         case TYPE_INTEGER:
-          memcpy(p, recordData.fieldData.intValue, sizeof(int));
+          memcpy(p, recordData.fieldData.valueSet, sizeof(int));
           p += sizeof(int);
           break;
         case TYPE_STRING:
-          memcpy(p, recordData.fieldData.stringValue, MAX_STRING);
+          memcpy(p, recordData.fieldData.valueSet, MAX_STRING);
           p += MAX_STRING;
         break;
         default:

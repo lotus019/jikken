@@ -105,6 +105,28 @@ union ValueSet {
 };
 
 /*
+ * OpratorType -- 比較演算子を表す列挙型
+ */
+typedef enum OperatorType OperatorType;
+enum OperatorType {
+    OPR_EQUAL,              /* = */
+    OPR_NOT_EQUAL,          /* != */
+    OPR_GREATER_THAN,           /* > */
+    OPR_LESS_THAN           /* < */
+};
+
+/*
+ * Condition -- 検索や削除の条件式を表現する構造体
+ */
+typedef struct Condition Condition;
+struct Condition {
+    char name[MAX_FIELD_NAME];      /* フィールド名 */
+    DataType dataType;          /* フィールドのデータ型 */
+    OperatorType operator;      /* 比較演算子 */
+    ValueSet valueSet; /*データを納める共用体*/
+};
+
+/*
  * file.cに定義されている関数群
  */
 
@@ -128,3 +150,16 @@ extern Result createTable(char *, TableInfo *);
 extern Result dropTable(char *tableName);
 extern TableInfo *getTableInfo(char *);
 extern void freeTableInfo(TableInfo *table);
+
+/*
+ * datamanip.cに定義されている関数群
+ */
+extern Result initializeDataManipModule();
+extern Result finalizeDataManipModule();
+extern Result insertRecord(char *tableName, RecordData *recordData);
+extern Result deleteRecord(char *tableName, Condition *condition);
+extern RecordSet *selectRecord(char *tableName, Condition *condition);
+extern void freeRecordSet(RecordSet *recordSet);
+extern Result createDataFile(char *tableName);
+extern Result deleteDataFile(char *tableName);
+extern void printRecordSet(RecordSet *recordSet);

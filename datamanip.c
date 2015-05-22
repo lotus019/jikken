@@ -86,6 +86,7 @@ Result insertRecord(char *tableName, RecordData *recordData)
     int numPage,len;
     char *record;
     char *filename;
+    FILE *file;
     char *p;
     char page[PAGE_SIZE]={0};
 
@@ -161,7 +162,7 @@ Result insertRecord(char *tableName, RecordData *recordData)
       /* pageの先頭からrecordSizeバイトずつ飛びながら、先頭のフラグが「0」(未使用)の場所を探す */
         for (j = 0; j < (PAGE_SIZE / recordSize); j++) {
           char *q;
-          q = j*recordSize;
+          q = page + j*recordSize;
           if (*q == 0) {
             /* 見つけた空き領域に上で用意したバイト列recordを埋め込む */
             memcpy(q, record, recordSize);
@@ -207,7 +208,53 @@ Result insertRecord(char *tableName, RecordData *recordData)
  *  レコードrecordが条件conditionを満足すればOK、満足しなければNGを返す
  */
 static Result checkCondition(RecordData *recordData, Condition *condition)
-{
+{ 
+  int i;
+    
+  for (i = 0; i < recordData->numField; i++){
+    if (strcmp(recordData->fieldData[i].name,condition->name)==0){
+      if (condition.dataType==TYPE_INTEGER){
+        if (condition.operator==OPR_EQUAL){
+          if (recordData.fieldData[i].valueSet == condition.valueSet){
+            return OK;     
+          }
+        }else if (condition.operator==OPR_NOT_EQUAL){
+          if (recordData.fieldData[i].valueSet != condition.valueSet){
+            return OK;
+          }
+        }else if (condition.operator==OPR_GREATER_THAN){
+          if (recordData.fieldData[i].valueSet > condition.valueSet){
+            return OK;
+          }
+        }else if (condition.operator==OPR_LESS_THAN){
+          if (recordData.fieldData[i].valueSet < condition.valueSet){
+            return OK;
+          }
+        }  
+      }else if (condition.dataType==TYPE_STRING){
+        if (condition.operator==OPR_EQUAL){
+          if (strcmp(recordData.fieldData[i].valueSet,condition.valueSet)==0){
+            return OK;     
+          }
+        }else if (condition.operator==OPR_NOT_EQUAL){
+          if (strcmp(recordData.fieldData[i].valueSet,condition.valueSet)!=0){
+            return OK;
+          }
+        }else if (condition.operator==OPR_GREATER_THAN){
+          if (strcmp(recordData.fieldData[i].valueSet,condition.valueSet)>0){
+            return OK;
+          }
+        }else if (condition.operator==OPR_LESS_THAN){
+          if (strcmp(recordData.fieldData[i].valueSet,condition.valueSet)<0){
+            return OK;
+          }
+        }  
+      }      
+    }  
+  }
+
+  return NG;
+
 }
 
 /*
@@ -229,6 +276,86 @@ static Result checkCondition(RecordData *recordData, Condition *condition)
  */
 RecordSet *selectRecord(char *tableName, Condition *condition)
 {
+  int i,j,k,len,recordSize;
+  char *filename;
+  FILE *file;
+  char *p;
+  char page[PAGE_SIZE]={0};
+  RecordSet *recordSet;
+  TableInfo *tableInfo;
+
+  /*レコードセットを用意する*/
+  if ((recordSet = malloc(sizeof(RecordSet))) == NULL) {
+      return NG;
+  }
+
+  /* テーブルの定義情報を取得する */
+    if ((tableInfo = getTableInfo(tableName)) == NULL) {
+      /* テーブル情報の取得に失敗したので、処理をやめて返る */
+      return;
+    }
+
+
+  //recordSet->numField = tableInfo->numField;
+
+
+  /* [tableName].defという文字列を作る */
+    len = strlen(tableName) + strlen(DEF_FILE_EXT) + 1;
+    if ((filename = malloc(len)) == NULL) {
+      return NG;
+    }
+    snprintf(filename, len, "%s%s", tableName, DEF_FILE_EXT);
+
+    /* データファイルをオープンする */
+    if ((file = openFile(filename)) == NULL) {
+      return NG;
+    }
+
+  /*レコードの大きさを得る*/
+  recordSize = getRecordSize(tableInfo); 
+
+  /**/
+  for (i = 0; i < getNumPages(filename); i++){
+    char *q
+    readPage(file,i,page);
+    for (j = 0; j < PAGE_SIZE/recordSize; j++){
+      q = page + j * recordSize;
+      if (*q==1){
+        q += 1;
+        RecordData *record;
+        if (record = malloc(RecordData)) == NULL) {
+          return NG;
+        }
+
+        for (k = 0; k < tableInfo->numField; k++) {
+          switch (tableInfo->fieldInfo[k].dataType) {
+            case TYPE_INTEGER:
+              memcpy(record->fieldData[k].valueSet, q, sizeof(int));
+              q += sizeof(int);
+              break;
+            case TYPE_STRING:
+              memcpy(record->fieldData[k].valueSet, q, MAX_STRING);
+              q += MAX_STRING;
+              break;
+            default:
+              /* ここにくることはないはず */
+              freeTableInfo(tableInfo);
+              free(record);
+              return NG;
+          }
+        }
+        if (checkCondition(record,condition)==OK){
+          if (recordSet->recordData==NULL){
+            recordSet->recordData = record;     
+          }else{
+
+          }   
+        } 
+
+      }
+    }
+  }
+
 }
 
 /*

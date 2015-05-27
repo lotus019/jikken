@@ -102,6 +102,7 @@ Result insertRecord(char *tableName, RecordData *recordData)
     /* 必要なバイト数分のメモリを確保する */
     if ((record = malloc(recordSize)) == NULL) {
         /* エラー処理 */
+      return NG;
     }
     p = record;
 
@@ -286,7 +287,7 @@ RecordSet *selectRecord(char *tableName, Condition *condition)
 
   /*レコードセットを用意する*/
   if ((recordSet = malloc(sizeof(RecordSet))) == NULL) {
-      return NG;
+      return NULL;
   }
 
   /* テーブルの定義情報を取得する */
@@ -302,31 +303,38 @@ RecordSet *selectRecord(char *tableName, Condition *condition)
   /* [tableName].defという文字列を作る */
     len = strlen(tableName) + strlen(DEF_FILE_EXT) + 1;
     if ((filename = malloc(len)) == NULL) {
-      return NG;
+      return NULL;
     }
     snprintf(filename, len, "%s%s", tableName, DEF_FILE_EXT);
 
     /* データファイルをオープンする */
     if ((file = openFile(filename)) == NULL) {
-      return NG;
+      return NULL;
     }
 
   /*レコードの大きさを得る*/
   recordSize = getRecordSize(tableInfo); 
 
-  /**/
+  /*ページを一つずつ読み込む*/
   for (i = 0; i < getNumPages(filename); i++){
     char *q
     readPage(file,i,page);
+    
+    /*レコードサイズごとに調べる*/
     for (j = 0; j < PAGE_SIZE/recordSize; j++){
       q = page + j * recordSize;
+      
+      /*使用中か調べる*/
       if (*q==1){
         q += 1;
         RecordData *record;
+        
+        /*データを収める領域を確保する*/
         if (record = malloc(RecordData)) == NULL) {
-          return NG;
+          return NULL;
         }
 
+        /*レコードの内容を領域に写す*/
         for (k = 0; k < tableInfo->numField; k++) {
           switch (tableInfo->fieldInfo[k].dataType) {
             case TYPE_INTEGER:
@@ -341,22 +349,34 @@ RecordSet *selectRecord(char *tableName, Condition *condition)
               /* ここにくることはないはず */
               freeTableInfo(tableInfo);
               free(record);
-              return NG;
+              return NULL;
           }
         }
+        
+        /*写されたデータが条件に一致したら、レコードの集合に追加する*/
         if (checkCondition(record,condition)==OK){
           if (recordSet->recordData==NULL){
-            recordSet->recordData = record;     
+            recordSet->recordData = record;
+            record->next = NULL;
           }else{
-
-          }   
-        } 
-
-      }
+            p = recordSet->recordData;
+            recordSet->recordData = record;
+            record->next = p;  
+          }  
+        }else{
+          free(record);
+        }   
+      } 
     }
   }
 
+  /*ファイルを閉じてレコードの集合を返す*/
+  closeFile(file);
+  return recordSet;
+
 }
+
+
 
 /*
  * freeRecordSet -- レコード集合の情報を収めたメモリ領域の解放
@@ -373,6 +393,16 @@ RecordSet *selectRecord(char *tableName, Condition *condition)
  */
 void freeRecordSet(RecordSet *recordSet)
 {
+  char *p;
+  /*レコードがある限り読み込む*/
+  while(recordSet->recordData!=NULL){
+    p = recordSet->recordData->next;
+    free(recordSet->recordData);
+    recordSet->recordData = p;
+  }
+
+  free(recordSet);
+
 }
 
 /*
@@ -387,6 +417,95 @@ void freeRecordSet(RecordSet *recordSet)
  */
 Result deleteRecord(char *tableName, Condition *condition)
 {
+  int i,j,k,len,recordSize;
+  char *filename;
+  FILE *file;
+  char *p;
+  char page[PAGE_SIZE]={0};
+  char *record;
+  TableInfo *tableInfo;
+
+  /* テーブルの定義情報を取得する */
+    if ((tableInfo = getTableInfo(tableName)) == NULL) {
+      /* テーブル情報の取得に失敗したので、処理をやめて返る */
+      return;
+    }
+
+  /* [tableName].defという文字列を作る */
+    len = strlen(tableName) + strlen(DEF_FILE_EXT) + 1;
+    if ((filename = malloc(len)) == NULL) {
+      return NULL;
+    }
+    snprintf(filename, len, "%s%s", tableName, DEF_FILE_EXT);
+
+    /* データファイルをオープンする */
+    if ((file = openFile(filename)) == NULL) {
+      return NULL;
+    }
+
+  /*レコードの大きさを得る*/
+  recordSize = getRecordSize(tableInfo); 
+
+  /*ページを一つずつ読み込む*/
+  for (i = 0; i < getNumPages(filename); i++){
+    char *q
+    readPage(file,i,page);
+    
+    /*レコードサイズごとに調べる*/
+    for (j = 0; j < PAGE_SIZE/recordSize; j++){
+      q = page + j * recordSize;
+      
+      /*使用中か調べる*/
+      if (*q==1){
+        p = q;
+        q += 1;
+        RecordData *record;
+        
+        /*データを収める領域を確保する*/
+        if (record = malloc(RecordData)) == NULL) {
+          return NULL;
+        }
+
+        /*レコードの内容を領域に写す*/
+        for (k = 0; k < tableInfo->numField; k++) {
+          switch (tableInfo->fieldInfo[k].dataType) {
+            case TYPE_INTEGER:
+              memcpy(record->fieldData[k].valueSet, q, sizeof(int));
+              q += sizeof(int);
+              break;
+            case TYPE_STRING:
+              memcpy(record->fieldData[k].valueSet, q, MAX_STRING);
+              q += MAX_STRING;
+              break;
+            default:
+              /* ここにくることはないはず */
+              freeTableInfo(tableInfo);
+              free(record);
+              return NULL;
+          }
+        }
+        
+        /*写されたデータが条件に一致したら、フラグを0にする*/
+        if (checkCondition(record,condition)==OK){
+          p = 0;
+        }   
+      } 
+    }
+
+    /* ファイルに書き戻す */
+    if (writePage(file, i, page) != OK) {
+      free(record);
+      return NG;
+    }
+
+    free(record);
+  
+  }
+
+  /*ファイルを閉じる*/
+  closeFile(file);
+  return OK;
+
 }
 
 /*

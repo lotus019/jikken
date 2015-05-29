@@ -25,5 +25,14 @@ file.o: file.c microdb.h
 test-file.o: test-file.c microdb.h
 	$(CC) -o test-file.o $(CFLAGS) -c test-file.c
 
+test-datadef: test-datadef.o datadef.o datamanip.o file.o
+	$(CC) -o test-datadef $(CFLAGS) test-datadef.o datadef.o datamanip.o file.o
+
+datamanip.o: datamanip.c microdb.h
+	$(CC) -o datamanip.o $(CFLAGS) -c datamanip.c
+
+datadef.o: datadef.c microdb.h
+	$(CC) -o datadef.o $(CFLAGS) -c datadef.c
+
 clean:
 	rm -f *.o

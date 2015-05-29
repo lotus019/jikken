@@ -77,6 +77,9 @@ Result createTable(char *tableName, TableInfo *tableInfo)
   if (createFile(filename) != OK) {
     return NG;
   }
+  if (createDataFile(tableName) != OK){
+    return NG;    
+  }
 
   File *file;
 

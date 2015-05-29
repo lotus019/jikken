@@ -5,7 +5,7 @@
 #include "microdb.h"
 
 /*
- * DATA_FILE_EXT -- データファイルの拡張子
+ * DAATA_FILE_EXT -- データファイルの拡張子
  */
 #define DATA_FILE_EXT ".dat"
 
@@ -138,11 +138,11 @@ Result insertRecord(char *tableName, RecordData *recordData)
 
 
     /* [tableName].defという文字列を作る */
-    len = strlen(tableName) + strlen(DEF_FILE_EXT) + 1;
+    len = strlen(tableName) + strlen(DATA_FILE_EXT) + 1;
     if ((filename = malloc(len)) == NULL) {
       return NG;
     }
-    snprintf(filename, len, "%s%s", tableName, DEF_FILE_EXT);
+    snprintf(filename, len, "%s%s", tableName, DATA_FILE_EXT);
 
     /* データファイルをオープンする */
     if ((file = openFile(filename)) == NULL) {
@@ -301,11 +301,11 @@ RecordSet *selectRecord(char *tableName, Condition *condition)
 
 
   /* [tableName].defという文字列を作る */
-    len = strlen(tableName) + strlen(DEF_FILE_EXT) + 1;
+    len = strlen(tableName) + strlen(DATA_FILE_EXT) + 1;
     if ((filename = malloc(len)) == NULL) {
       return NULL;
     }
-    snprintf(filename, len, "%s%s", tableName, DEF_FILE_EXT);
+    snprintf(filename, len, "%s%s", tableName, DATA_FILE_EXT);
 
     /* データファイルをオープンする */
     if ((file = openFile(filename)) == NULL) {
@@ -330,7 +330,8 @@ RecordSet *selectRecord(char *tableName, Condition *condition)
         RecordData *record;
         
         /*データを収める領域を確保する*/
-        if (record = malloc(RecordData)) == NULL) {
+        if ((recordData = (RecordData *) malloc(sizeof(RecordData))) == NULL) {
+                /* エラー処理 */
           return NULL;
         }
 
@@ -393,12 +394,13 @@ RecordSet *selectRecord(char *tableName, Condition *condition)
  */
 void freeRecordSet(RecordSet *recordSet)
 {
-  char *p;
+  char *p,*r;
+  r = recordSet->recordData;
   /*レコードがある限り読み込む*/
-  while(recordSet->recordData!=NULL){
-    p = recordSet->recordData->next;
-    free(recordSet->recordData);
-    recordSet->recordData = p;
+  while(r!=NULL){
+    p = r->next;
+    free(r);
+    r = p;
   }
 
   free(recordSet);
@@ -417,13 +419,14 @@ void freeRecordSet(RecordSet *recordSet)
  */
 Result deleteRecord(char *tableName, Condition *condition)
 {
-  int i,j,k,len,recordSize;
+  int i,j,k,flag,len,recordSize;
   char *filename;
   FILE *file;
   char *p;
   char page[PAGE_SIZE]={0};
   char *record;
   TableInfo *tableInfo;
+  RecordData *record;
 
   /* テーブルの定義情報を取得する */
     if ((tableInfo = getTableInfo(tableName)) == NULL) {
@@ -432,19 +435,25 @@ Result deleteRecord(char *tableName, Condition *condition)
     }
 
   /* [tableName].defという文字列を作る */
-    len = strlen(tableName) + strlen(DEF_FILE_EXT) + 1;
+    len = strlen(tableName) + strlen(DATA_FILE_EXT) + 1;
     if ((filename = malloc(len)) == NULL) {
-      return NULL;
+      return NG;
     }
-    snprintf(filename, len, "%s%s", tableName, DEF_FILE_EXT);
+    snprintf(filename, len, "%s%s", tableName, DATA_FILE_EXT);
 
     /* データファイルをオープンする */
     if ((file = openFile(filename)) == NULL) {
-      return NULL;
+      return NG;
     }
 
   /*レコードの大きさを得る*/
   recordSize = getRecordSize(tableInfo); 
+        
+    /*データを収める領域を確保する*/
+  if ((recordData = (RecordData *) malloc(sizeof(RecordData))) == NULL) {
+    /* エラー処理 */
+    return NG;
+  }
 
   /*ページを一つずつ読み込む*/
   for (i = 0; i < getNumPages(filename); i++){
@@ -459,13 +468,6 @@ Result deleteRecord(char *tableName, Condition *condition)
       if (*q==1){
         p = q;
         q += 1;
-        RecordData *record;
-        
-        /*データを収める領域を確保する*/
-        if (record = malloc(RecordData)) == NULL) {
-          return NULL;
-        }
-
         /*レコードの内容を領域に写す*/
         for (k = 0; k < tableInfo->numField; k++) {
           switch (tableInfo->fieldInfo[k].dataType) {
@@ -481,25 +483,25 @@ Result deleteRecord(char *tableName, Condition *condition)
               /* ここにくることはないはず */
               freeTableInfo(tableInfo);
               free(record);
-              return NULL;
+              return NG;
           }
         }
         
         /*写されたデータが条件に一致したら、フラグを0にする*/
         if (checkCondition(record,condition)==OK){
           p = 0;
-        }   
+          flag = 1;
+        }
       } 
     }
 
     /* ファイルに書き戻す */
-    if (writePage(file, i, page) != OK) {
-      free(record);
-      return NG;
+    if (flag==1){
+      if (writePage(file, i, page) != OK) {
+        return NG;
+      }  
     }
-
     free(record);
-  
   }
 
   /*ファイルを閉じる*/
@@ -519,6 +521,23 @@ Result deleteRecord(char *tableName, Condition *condition)
  */
 Result createDataFile(char *tableName)
 {
+  int len;
+  char *filename;
+
+  /* [tableName].dafという文字列を作る */
+  len = strlen(tableName) + strlen(DATA_FILE_EXT) + 1;
+  if ((filename = malloc(len)) == NULL) {
+      return NG;
+  }
+  snprintf(filename, len, "%s%s", tableName, DATA_FILE_EXT);
+
+
+  if (createFile(filename) != OK) {
+    return NG;
+  }
+
+  return OK;
+
 }
 
 /*
@@ -532,6 +551,23 @@ Result createDataFile(char *tableName)
  */
 Result deleteDataFile(char *tableName)
 {
+  int len;
+  char *filename;
+
+  /* [tableName].dafという文字列を作る */
+  len = strlen(tableName) + strlen(DATA_FILE_EXT) + 1;
+  if ((filename = malloc(len)) == NULL) {
+      return NG;
+  }
+  snprintf(filename, len, "%s%s", tableName, DATA_FILE_EXT);
+
+
+  if (deleteFile(filename) != OK) {
+    return NG;
+  }
+
+  return OK;
+
 }
 
 /*
@@ -543,6 +579,7 @@ Result deleteDataFile(char *tableName)
  * 返り値:
  *  なし
  */
-void printRecordSet(RecordSet *recordSet)
+void printRecordSet(ColumnData *columnData, RecordSet *recordSet)
 {
+  
 }

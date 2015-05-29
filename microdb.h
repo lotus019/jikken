@@ -126,6 +126,15 @@ struct Condition {
     ValueSet valueSet; /*データを納める共用体*/
 };
 
+
+/*
+ * ColumnData　表示する列の名前
+ */
+typedef struct ColumnData ColumnData;
+struct ColumnData {
+    char name[MAX_FIELD][MAX_FIELD_NAME];    /* フィールド名 */
+};
+
 /*
  * file.cに定義されている関数群
  */
@@ -162,4 +171,4 @@ extern RecordSet *selectRecord(char *tableName, Condition *condition);
 extern void freeRecordSet(RecordSet *recordSet);
 extern Result createDataFile(char *tableName);
 extern Result deleteDataFile(char *tableName);
-extern void printRecordSet(RecordSet *recordSet);
+void printRecordSet(ColumnData *columnData, RecordSet *recordSet)

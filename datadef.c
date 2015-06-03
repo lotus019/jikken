@@ -8,6 +8,7 @@
 #include <string.h>
 #include "microdb.h"
 
+
 /*
  * DEF_FILE_EXT -- データ定義ファイルの拡張子
  */

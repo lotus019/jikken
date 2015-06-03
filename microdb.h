@@ -69,6 +69,12 @@ struct TableInfo {
  */
 #define MAX_STRING 20
 
+typedef union ValueSet ValueSet;
+union ValueSet {
+    int intValue;     /* integer型の場合の値 */
+    char stringValue[MAX_STRING]; /* string型の場合の値 */
+};
+
 /*
  * FieldData -- 1つのフィールドのデータを表現する構造体
  */
@@ -96,12 +102,6 @@ typedef struct RecordSet RecordSet;
 struct RecordSet {
     int numRecord;      /* レコード数 */
     RecordData *recordData;   /* レコードのリストへのポインタ */
-};
-
-typedef union ValueSet ValueSet;
-union ValueSet {
-    int intValue;     /* integer型の場合の値 */
-    char stringValue[MAX_STRING]; /* string型の場合の値 */
 };
 
 /*
@@ -171,4 +171,5 @@ extern RecordSet *selectRecord(char *tableName, Condition *condition);
 extern void freeRecordSet(RecordSet *recordSet);
 extern Result createDataFile(char *tableName);
 extern Result deleteDataFile(char *tableName);
-void printRecordSet(ColumnData *columnData, RecordSet *recordSet)
+extern void printTableData(char *tableName);
+extern void printRecordSet(RecordSet *recordSet);

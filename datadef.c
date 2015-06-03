@@ -142,6 +142,9 @@ Result dropTable(char *tableName)
   if (deleteFile(filename) != OK) {
     return NG;
   }
+  if (deleteDataFile(tableName) != OK){
+    return NG;
+  }
 
   return OK;
 }

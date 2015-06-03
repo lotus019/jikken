@@ -225,7 +225,7 @@ Result insertRecord(char *tableName, RecordData *recordData)
 static Result checkCondition(RecordData *recordData, Condition *condition)
 { 
   int i;
-    
+
   for (i = 0; i < recordData->numField; i++){
     if (strcmp(recordData->fieldData[i].name,condition->name)==0){
       if (condition->dataType==TYPE_INTEGER){
@@ -291,27 +291,25 @@ static Result checkCondition(RecordData *recordData, Condition *condition)
  */
 RecordSet *selectRecord(char *tableName, Condition *condition)
 {
-  int i,j,k,len,recordSize;
+  int i,j,k,l=0,len,recordSize;
   char *filename;
   File *file;
-  char *p;
+  RecordData *p;
   char page[PAGE_SIZE]={0};
   RecordSet *recordSet;
   TableInfo *tableInfo;
 
   /*レコードセットを用意する*/
-  if ((recordSet = malloc(sizeof(RecordSet))) == NULL) {
+  if ((recordSet = (RecordSet *)malloc(sizeof(RecordSet))) == NULL) {
       return NULL;
   }
+  recordSet->recordData=NULL;
 
   /* テーブルの定義情報を取得する */
     if ((tableInfo = getTableInfo(tableName)) == NULL) {
       /* テーブル情報の取得に失敗したので、処理をやめて返る */
       return NULL;
     }
-
-
-  //recordSet->numField = tableInfo->numField;
 
 
   /* [tableName].defという文字列を作る */
@@ -325,6 +323,7 @@ RecordSet *selectRecord(char *tableName, Condition *condition)
     if ((file = openFile(filename)) == NULL) {
       return NULL;
     }
+
 
   /*レコードの大きさを得る*/
   recordSize = getRecordSize(tableInfo); 
@@ -353,13 +352,17 @@ RecordSet *selectRecord(char *tableName, Condition *condition)
       }
 
       /*レコードの内容を領域に写す*/
+      record->numField = tableInfo->numField;
       for (k = 0; k < tableInfo->numField; k++) {
+        strcpy(record->fieldData[k].name,tableInfo->fieldInfo[k].name);
         switch (tableInfo->fieldInfo[k].dataType) {
           case TYPE_INTEGER:
+            record->fieldData[k].dataType = TYPE_INTEGER;
             memcpy(&record->fieldData[k].valueSet, q, sizeof(int));
             q += sizeof(int);
             break;
           case TYPE_STRING:
+            record->fieldData[k].dataType = TYPE_STRING;
             memcpy(&record->fieldData[k].valueSet, q, MAX_STRING);
             q += MAX_STRING;
             break;
@@ -371,6 +374,7 @@ RecordSet *selectRecord(char *tableName, Condition *condition)
         }
       }
         
+      
       /*写されたデータが条件に一致したら、レコードの集合に追加する*/
       if (checkCondition(record,condition)==OK){
         if (recordSet->recordData==NULL){
@@ -380,7 +384,9 @@ RecordSet *selectRecord(char *tableName, Condition *condition)
           p = recordSet->recordData;
           recordSet->recordData = record;
           record->next = p;  
-        }  
+        }
+        l++;
+        recordSet->numRecord= l ;
       }else{
          free(record);
       }   
@@ -411,7 +417,7 @@ RecordSet *selectRecord(char *tableName, Condition *condition)
 void freeRecordSet(RecordSet *recordSet)
 {
   //char *p,*r;
-  RecordSet *p;
+  RecordData *p;
   //r = recordSet->recordData;
   /*レコードがある限り読み込む*/
   while(recordSet->recordData !=NULL){
@@ -486,13 +492,17 @@ Result deleteRecord(char *tableName, Condition *condition)
         p = q;
         q += 1;
         /*レコードの内容を領域に写す*/
+        record->numField = tableInfo->numField;
         for (k = 0; k < tableInfo->numField; k++) {
+          strcpy(record->fieldData[k].name,tableInfo->fieldInfo[k].name);
           switch (tableInfo->fieldInfo[k].dataType) {
             case TYPE_INTEGER:
+              record->fieldData[k].dataType = TYPE_INTEGER;
               memcpy(&record->fieldData[k].valueSet, q, sizeof(int));
               q += sizeof(int);
               break;
             case TYPE_STRING:
+              record->fieldData[k].dataType =TYPE_STRING;
               memcpy(&record->fieldData[k].valueSet, q, MAX_STRING);
               q += MAX_STRING;
               break;
@@ -506,7 +516,7 @@ Result deleteRecord(char *tableName, Condition *condition)
         
         /*写されたデータが条件に一致したら、フラグを0にする*/
         if (checkCondition(record,condition)==OK){
-          p = 0;
+          *p = 0;
           flag = 1;
         }
       } 
@@ -696,22 +706,22 @@ void printRecordSet(RecordSet *recordSet)
     /* レコードを1つずつ取りだし、表示する */
     for (record = recordSet->recordData; record != NULL; record = record->next) {
         /* すべてのフィールドのフィールド名とフィールド値を表示する */
-  for (i = 0; i < record->numField; i++) {
-      printf("Field %s = ", record->fieldData[i].name);
+      for (i = 0; i < record->numField; i++) {
+        printf("Field %s = ", record->fieldData[i].name);
 
-      switch (record->fieldData[i].dataType) {
-      case TYPE_INTEGER:
-        printf("%d\n", record->fieldData[i].valueSet.intValue);
-        break;
-      case TYPE_STRING:
-        printf("%s\n", record->fieldData[i].valueSet.stringValue);
-        break;
-      default:
-    /* ここに来ることはないはず */
-    return;
+        switch (record->fieldData[i].dataType) {
+        case TYPE_INTEGER:
+          printf("%d\n", record->fieldData[i].valueSet.intValue);
+          break;
+        case TYPE_STRING:
+          printf("%s\n", record->fieldData[i].valueSet.stringValue);
+          break;
+        default:
+          /* ここに来ることはないはず */
+          return;
+        }
       }
-  }
 
-  printf("\n");
+      printf("\n");
     }
 }

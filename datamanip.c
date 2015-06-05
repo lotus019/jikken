@@ -225,43 +225,138 @@ Result insertRecord(char *tableName, RecordData *recordData)
 static Result checkCondition(RecordData *recordData, Condition *condition)
 { 
   int i;
-
   for (i = 0; i < recordData->numField; i++){
     if (strcmp(recordData->fieldData[i].name,condition->name)==0){
       if (condition->dataType==TYPE_INTEGER){
         if (condition->operator==OPR_EQUAL){
           if (recordData->fieldData[i].valueSet.intValue == condition->valueSet.intValue){
-            return OK;     
+            if (condition->andCondition==NULL){
+              return OK; 
+            }else{
+              if(checkCondition(recordData,condition->andCondition)==OK){
+                return OK;
+              }                
+            }
+          }else{
+            if (condition->orCondition != NULL){
+              if(checkCondition(recordData,condition->orCondition)==OK){
+                return OK;
+              } 
+            }
           }
         }else if (condition->operator==OPR_NOT_EQUAL){
           if (recordData->fieldData[i].valueSet.intValue != condition->valueSet.intValue){
-            return OK;
+            if (condition->andCondition==NULL){
+              return OK; 
+            }else{
+              if(checkCondition(recordData,condition->andCondition)==OK){
+                return OK;
+              }                
+            }
+          }else{
+            if (condition->orCondition != NULL){
+              if(checkCondition(recordData,condition->orCondition)==OK){
+                return OK;
+              } 
+            }
           }
         }else if (condition->operator==OPR_GREATER_THAN){
           if (recordData->fieldData[i].valueSet.intValue > condition->valueSet.intValue){
-            return OK;
+            if (condition->andCondition==NULL){
+              return OK; 
+            }else{
+              if(checkCondition(recordData,condition->andCondition)==OK){
+                return OK;
+              }                
+            }
+          }else{
+            if (condition->orCondition != NULL){
+              if(checkCondition(recordData,condition->orCondition)==OK){
+                return OK;
+              } 
+            }
           }
         }else if (condition->operator==OPR_LESS_THAN){
           if (recordData->fieldData[i].valueSet.intValue < condition->valueSet.intValue){
-            return OK;
+            if (condition->andCondition==NULL){
+              return OK; 
+            }else{
+              if(checkCondition(recordData,condition->andCondition)==OK){
+                return OK;
+              }                
+            }
+          }else{
+            if (condition->orCondition != NULL){
+              if(checkCondition(recordData,condition->orCondition)==OK){
+                return OK;
+              } 
+            }
           }
         }  
       }else if (condition->dataType==TYPE_STRING){
         if (condition->operator==OPR_EQUAL){
           if (strcmp(recordData->fieldData[i].valueSet.stringValue,condition->valueSet.stringValue)==0){
-            return OK;     
+            if (condition->andCondition==NULL){
+              return OK; 
+            }else{
+              if(checkCondition(recordData,condition->andCondition)==OK){
+                return OK;
+              }                
+            }  
+          }else{
+            if (condition->orCondition != NULL){
+              if(checkCondition(recordData,condition->orCondition)==OK){
+                return OK;
+              } 
+            }
           }
         }else if (condition->operator==OPR_NOT_EQUAL){
           if (strcmp(recordData->fieldData[i].valueSet.stringValue,condition->valueSet.stringValue)!=0){
-            return OK;
+            if (condition->andCondition==NULL){
+              return OK; 
+            }else{
+              if(checkCondition(recordData,condition->andCondition)==OK){
+                return OK;
+              }                
+            } 
+          }else{
+            if (condition->orCondition != NULL){
+              if(checkCondition(recordData,condition->orCondition)==OK){
+                return OK;
+              } 
+            }
           }
         }else if (condition->operator==OPR_GREATER_THAN){
           if (strcmp(recordData->fieldData[i].valueSet.stringValue,condition->valueSet.stringValue)>0){
-            return OK;
+            if (condition->andCondition==NULL){
+              return OK; 
+            }else{
+              if(checkCondition(recordData,condition->andCondition)==OK){
+                return OK;
+              }                
+            } 
+          }else{
+            if (condition->orCondition != NULL){
+              if(checkCondition(recordData,condition->orCondition)==OK){
+                return OK;
+              } 
+            }
           }
         }else if (condition->operator==OPR_LESS_THAN){
           if (strcmp(recordData->fieldData[i].valueSet.stringValue,condition->valueSet.stringValue)<0){
-            return OK;
+            if (condition->andCondition==NULL){
+              return OK; 
+            }else{
+              if(checkCondition(recordData,condition->andCondition)==OK){
+                return OK;
+              }                
+            } 
+          }else{
+            if (condition->orCondition != NULL){
+              if(checkCondition(recordData,condition->orCondition)==OK){
+                return OK;
+              } 
+            }
           }
         }  
       }      
@@ -304,6 +399,7 @@ RecordSet *selectRecord(char *tableName, Condition *condition)
       return NULL;
   }
   recordSet->recordData=NULL;
+  recordSet->numRecord=0;
 
   /* テーブルの定義情報を取得する */
     if ((tableInfo = getTableInfo(tableName)) == NULL) {
@@ -373,8 +469,7 @@ RecordSet *selectRecord(char *tableName, Condition *condition)
             return NULL;
         }
       }
-        
-      
+
       /*写されたデータが条件に一致したら、レコードの集合に追加する*/
       if (checkCondition(record,condition)==OK){
         if (recordSet->recordData==NULL){
@@ -416,6 +511,8 @@ RecordSet *selectRecord(char *tableName, Condition *condition)
  */
 void freeRecordSet(RecordSet *recordSet)
 {
+
+
   //char *p,*r;
   RecordData *p;
   //r = recordSet->recordData;
@@ -426,7 +523,9 @@ void freeRecordSet(RecordSet *recordSet)
     recordSet->recordData = p;
   }
 
-  free(recordSet);
+  if (recordSet==NULL){
+    free(recordSet);
+  }
 
 }
 
@@ -528,9 +627,9 @@ Result deleteRecord(char *tableName, Condition *condition)
         return NG;
       }  
     }
-    free(record);
   }
 
+  free(record);
   /*ファイルを閉じる*/
   closeFile(file);
   return OK;
@@ -616,7 +715,7 @@ void printTableData(char *tableName)
 
     /* テーブルのデータ定義情報を取得する */
     if ((tableInfo = getTableInfo(tableName)) == NULL) {
-  return;
+      return;
     }
 
     /* 1レコード分のデータをファイルに収めるのに必要なバイト数を計算する */
@@ -625,8 +724,8 @@ void printTableData(char *tableName)
     /* データファイルのファイル名を保存するメモリ領域の確保 */
     len = strlen(tableName) + strlen(DATA_FILE_EXT) + 1;
     if ((filename = malloc(len)) == NULL) {
-  freeTableInfo(tableInfo);
-  return;
+      freeTableInfo(tableInfo);
+      return;
     }
 
     /* ファイル名の作成 */
@@ -637,12 +736,25 @@ void printTableData(char *tableName)
 
     /* データファイルをオープンする */
     if ((file = openFile(filename)) == NULL) {
-  free(filename);
-  freeTableInfo(tableInfo);
-  return;
+      free(filename);
+      freeTableInfo(tableInfo);
+      return;
     }
 
     free(filename);
+
+    for (i = 0; i < tableInfo->numField; i++){
+      printf("+---------------");      
+    }
+    printf("+\n");
+    for (i = 0; i < tableInfo->numField; i++){
+      printf("|%-15s", tableInfo->fieldInfo[i].name);      
+    }
+    printf("|\n");
+    for (i = 0; i < tableInfo->numField; i++){
+      printf("+---------------");      
+    }
+    printf("+\n");
 
     /* レコードを1つずつ取りだし、表示する */
     for (i = 0; i < numPage; i++) {
@@ -661,32 +773,37 @@ void printTableData(char *tableName)
       p++;
 
             /* 1レコード分のデータを出力する */
-      for (k = 0; k < tableInfo->numField; k++) {
-    int intValue;
-    char stringValue[MAX_STRING];
+    for (k = 0; k < tableInfo->numField; k++) {
+      int intValue;
+      char stringValue[MAX_STRING];
 
-    printf("Field %s = ", tableInfo->fieldInfo[k].name);
+      //printf("Field %s = ", tableInfo->fieldInfo[k].name);
 
-    switch (tableInfo->fieldInfo[k].dataType) {
-    case TYPE_INTEGER:
+      switch (tableInfo->fieldInfo[k].dataType) {
+      case TYPE_INTEGER:
         memcpy(&intValue, p, sizeof(int));
         p += sizeof(int);
-        printf("%d\n", intValue);
+        printf("|%15d", intValue);
         break;
-    case TYPE_STRING:
+      case TYPE_STRING:
         memcpy(stringValue, p, MAX_STRING);
         p += MAX_STRING;
-        printf("%s\n", stringValue);
+        printf("|%-15s", stringValue);
         break;
-    default:
+      default:
         /* ここに来ることはないはず */
         return;
-    }
       }
-
-      printf("\n");
-  }
     }
+    printf("|\n");
+  }
+  }
+  for (i = 0; i < tableInfo->numField; i++){
+      printf("+---------------");      
+  }
+  printf("+\n");
+
+  freeTableInfo(tableInfo);
 }
 
 /*
@@ -703,18 +820,33 @@ void printRecordSet(RecordSet *recordSet)
     /* レコード数の表示 */
     printf("Number of Records: %d\n", recordSet->numRecord);
 
+    if (recordSet->recordData==NULL){
+      return;
+    }
+
+    for (i = 0; i < recordSet->recordData->numField; i++){
+      printf("+---------------");      
+    }
+    printf("+\n");
+    for (i = 0; i < recordSet->recordData->numField; i++){
+      printf("|%-15s", recordSet->recordData->fieldData[i].name);      
+    }
+    printf("|\n");
+    for (i = 0; i < recordSet->recordData->numField; i++){
+      printf("+---------------");      
+    }
+    printf("+\n");
+
     /* レコードを1つずつ取りだし、表示する */
     for (record = recordSet->recordData; record != NULL; record = record->next) {
         /* すべてのフィールドのフィールド名とフィールド値を表示する */
       for (i = 0; i < record->numField; i++) {
-        printf("Field %s = ", record->fieldData[i].name);
-
         switch (record->fieldData[i].dataType) {
         case TYPE_INTEGER:
-          printf("%d\n", record->fieldData[i].valueSet.intValue);
+          printf("|%15d", record->fieldData[i].valueSet.intValue);
           break;
         case TYPE_STRING:
-          printf("%s\n", record->fieldData[i].valueSet.stringValue);
+          printf("|%-15s", record->fieldData[i].valueSet.stringValue);
           break;
         default:
           /* ここに来ることはないはず */
@@ -722,6 +854,10 @@ void printRecordSet(RecordSet *recordSet)
         }
       }
 
-      printf("\n");
+      printf("|\n");
     }
+    for (i = 0; i < recordSet->recordData->numField; i++){
+      printf("+---------------");      
+    }
+    printf("+\n");
 }

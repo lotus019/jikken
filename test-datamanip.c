@@ -15,26 +15,40 @@
 Result test1()
 {
     RecordData record;
-    int i;
+    int i,j;
 
     /*
      * 以下のレコードを挿入
      * ('i00001', 'Mickey', 20, 'Urayasu')
      */
-    i = 0;
+for (j = 0; j < 10; j++){
+        i = 0;
     strcpy(record.fieldData[i].name, "id");
     record.fieldData[i].dataType = TYPE_STRING;
     strcpy(record.fieldData[i].valueSet.stringValue, "i00001");
     i++;
 
-    strcpy(record.fieldData[i].name, "name");
-    record.fieldData[i].dataType = TYPE_STRING;
-    strcpy(record.fieldData[i].valueSet.stringValue, "Mickey");
-    i++;
+    if (j%3==1){
+        strcpy(record.fieldData[i].name, "name");
+        record.fieldData[i].dataType = TYPE_STRING;
+        strcpy(record.fieldData[i].valueSet.stringValue, "Mickey");
+        i++;  
+    }else if (j%3==2){
+        strcpy(record.fieldData[i].name, "name");
+        record.fieldData[i].dataType = TYPE_STRING;
+        strcpy(record.fieldData[i].valueSet.stringValue, "Minnie");
+        i++;
+    }else{
+        strcpy(record.fieldData[i].name, "name");
+        record.fieldData[i].dataType = TYPE_STRING;
+        strcpy(record.fieldData[i].valueSet.stringValue, "Donald");
+        i++;
+    }
+
 
     strcpy(record.fieldData[i].name, "age");
     record.fieldData[i].dataType = TYPE_INTEGER;
-    record.fieldData[i].valueSet.intValue = 20;
+    record.fieldData[i].valueSet.intValue = j;
     i++;
 
     strcpy(record.fieldData[i].name, "address");
@@ -45,14 +59,17 @@ Result test1()
     record.numField = i;
 
     if (insertRecord(TABLE_NAME, &record) != OK) {
-	fprintf(stderr, "Cannot insert record.\n");
-	return NG;
+    fprintf(stderr, "Cannot insert record.\n");
+    return NG;
     }
+}
+
 
     /*
      * 以下のレコードを挿入
      * ('i00002', 'Minnie', 19, 'Urayasu')
      */
+     /*
     i = 0;
     strcpy(record.fieldData[i].name, "id");
     record.fieldData[i].dataType = TYPE_STRING;
@@ -80,11 +97,12 @@ Result test1()
 	fprintf(stderr, "Cannot insert record.\n");
 	return NG;
     }
-
+*/
     /*
      * 以下のレコードを挿入
      * ('i00003', 'Donald', 17, 'Florida')
      */
+     /*
     i = 0;
     strcpy(record.fieldData[i].name, "id");
     record.fieldData[i].dataType = TYPE_STRING;
@@ -116,7 +134,7 @@ Result test1()
     /*
      * 以下のレコードを挿入
      * ('i00004', 'Daisy', 15, 'Florida')
-     */
+     *//*
     i = 0;
     strcpy(record.fieldData[i].name, "id");
     record.fieldData[i].dataType = TYPE_STRING;
@@ -146,7 +164,7 @@ Result test1()
     }
 
     /* データを表示する */
-    printTableData(TABLE_NAME);
+//    printTableData(TABLE_NAME);
 
     return OK;
 }
@@ -157,7 +175,8 @@ Result test1()
 Result test2()
 {
     RecordSet *recordSet;
-    Condition condition;
+    Condition condition,condition2,condition3,condition4;
+
 
     /*
      * 以下の検索を実行
@@ -165,13 +184,36 @@ Result test2()
      */
     strcpy(condition.name, "age");
     condition.dataType = TYPE_INTEGER;
-    condition.operator = OPR_GREATER_THAN;
-    condition.valueSet.intValue = 17;
+    condition.operator = OPR_EQUAL;
+    condition.valueSet.intValue = 4;
+    strcpy(condition4.name, "age");
+
+    condition4.dataType = TYPE_INTEGER;
+    condition4.operator = OPR_EQUAL;
+    condition4.valueSet.intValue = 5;
+    condition.orCondition=&condition4;
+
+    condition4.orCondition=NULL;
+    condition4.andCondition=NULL;
+/*
+    strcpy(condition2.name, "name");
+    condition2.dataType = TYPE_STRING;
+    condition2.operator = OPR_EQUAL;
+    strcpy(condition2.valueSet.stringValue, "Mickey");
+    condition.andCondition=&condition2;*/
+    strcpy(condition3.name, "name");
+    condition3.dataType = TYPE_STRING;
+    condition3.operator = OPR_NOT_EQUAL;
+    strcpy(condition3.valueSet.stringValue, "Mickey");
+    condition.orCondition=&condition3;
+    condition3.orCondition=NULL;
+    condition3.andCondition=NULL;
 
     if ((recordSet = selectRecord(TABLE_NAME, &condition)) == NULL) {
 	fprintf(stderr, "Cannot select records.\n");
 	return NG;
     }
+
 
     /* 結果を表示 */
     printf("age > 17\n");
@@ -184,10 +226,12 @@ Result test2()
      * 以下の検索を実行
      * select * from TABLE_NAME where address != 'Florida'
      */
-    strcpy(condition.name, "address");
+     
+    strcpy(condition.name, "name");
     condition.dataType = TYPE_STRING;
     condition.operator = OPR_NOT_EQUAL;
-    strcpy(condition.valueSet.stringValue, "Florida");
+    strcpy(condition.valueSet.stringValue, "Mickey");
+    condition.andCondition=NULL;
 
     if ((recordSet = selectRecord(TABLE_NAME, &condition)) == NULL) {
 	fprintf(stderr, "Cannot select records.\n");

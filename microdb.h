@@ -124,16 +124,17 @@ struct Condition {
     DataType dataType;          /* フィールドのデータ型 */
     OperatorType operator;      /* 比較演算子 */
     ValueSet valueSet; /*データを納める共用体*/
+    struct Condition *andCondition;
+    struct Condition *orCondition;
 };
-
 
 /*
  * ColumnData　表示する列の名前
- */
+ *//*
 typedef struct ColumnData ColumnData;
 struct ColumnData {
-    char name[MAX_FIELD][MAX_FIELD_NAME];    /* フィールド名 */
-};
+    char name[MAX_FIELD][MAX_FIELD_NAME];   */ /* フィールド名 */
+//};
 
 /*
  * file.cに定義されている関数群

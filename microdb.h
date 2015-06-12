@@ -115,6 +115,8 @@ enum OperatorType {
     OPR_LESS_THAN           /* < */
 };
 
+#define CON_SIZE 10
+
 /*
  * Condition -- 検索や削除の条件式を表現する構造体
  */

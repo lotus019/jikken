@@ -14,7 +14,11 @@ do-test: test-file
 
 # 「microdb」を作成するためのルールは、今後追加される予定
 # とりあえず、今のところは「何もしない」という設定にしておく。
-microdb:
+microdb:main.o file.o datadef.o datamanip.o
+	$(CC) -o microdb $(CFLAGS) main.o datadef.o datamanip.o file.o
+
+main.o: main.c microdb.h
+	$(CC) -o main.o $(CFLAGS) -c main.c
 
 file.o: file.c microdb.h
 	$(CC) -o file.o $(CFLAGS) -c file.c

@@ -43,45 +43,6 @@ char *errorMessage[] = {
 };
 
 /*
- * NUM_BUFFER -- ファイルアクセスモジュールが管理するバッファの大きさ(ページ数)
- */
-#define NUM_BUFFER 4
-#define UNDEFINED -1
-
-/*
- * modifyFlag -- 変更フラグ
- */
-typedef enum { UNMODIFIED = 0, MODIFIED = 1 } modifyFlag;
-
-/*
- * Buffer -- 1ページ分のバッファを記憶する構造体
- */
-typedef struct Buffer Buffer;
-struct Buffer {
-  File *file;   /* バッファの内容が格納されたファイル */
-                    /* file == NULLならこのバッファは未使用 */
-  int pageNum;            /* ページ番号 */
-  char page[PAGE_SIZE];       /* ページの内容を格納する配列 */
-  struct Buffer *prev;        /* 一つ前のバッファへのポインタ */
-  struct Buffer *next;        /* 一つ後ろのバッファへのポインタ */
-  modifyFlag modified;        /* ページの内容が更新されたかどうかを示すフラグ */
-};
-
-static Result initializeBufferList();
-static Result finalizeBufferList();
-static void moveBufferToListHead(Buffer *buf);
-
-/*
- * bufferListHead -- LRUリストの先頭へのポインタ
- */
-static Buffer *bufferListHead = NULL;
-
-/*
- * bufferListTail -- LRUリストの最後へのポインタ
- */
-static Buffer *bufferListTail = NULL;
-
-/*
  * printErrorMessage -- エラーメッセージの表示
  *
  * 引数:
@@ -106,7 +67,6 @@ void printErrorMessage(ErrorMessageNo messageNo) {
  */
 Result initializeFileModule()
 {
-  initializeBufferList();
   return OK;
 }
 
@@ -121,7 +81,6 @@ Result initializeFileModule()
  */
 Result finalizeFileModule()
 {
-  finalizeBufferList();
   return OK;
 }
 
@@ -137,10 +96,10 @@ Result finalizeFileModule()
 Result createFile(char *filename)
 {
   if (creat(filename,S_IRUSR|S_IWUSR)==-1){
-    printErrorMessage(ERR_MSG_CREATE);
-    return NG;
-  }
-  return OK;
+  printErrorMessage(ERR_MSG_CREATE);
+  return NG;
+    }
+    return OK;
 }
 
 /*
@@ -214,15 +173,15 @@ File *openFile(char *filename)
  */
 Result closeFile(File *file)
 {
-  if (close(file->desc) == -1) {
-    printErrorMessage(ERR_MSG_CLOSE);
-    return NG;
-  }
-  
-  /* File構造体の解放 */
-  free(file);
-    
-  return OK;
+    if (close(file->desc) == -1) {
+        printErrorMessage(ERR_MSG_CLOSE);
+        return NG;
+    }
+
+    /* File構造体の解放 */
+    free(file);
+
+    return OK;
 }
 
 /*
@@ -238,63 +197,20 @@ Result closeFile(File *file)
  */
 Result readPage(File *file, int pageNum, char *page)
 {
-  fprintf(stderr, "a ");
-  int i;
-  Buffer *buf=bufferListHead;
-  /*バッファの中にページがあるか探す*/
-  for (i = 0; i < NUM_BUFFER; i++){
-    if (buf->pageNum==pageNum && file==buf->file){
-      if ((memcpy(page,buf->page,PAGE_SIZE))==NULL) {
-        /* エラー処理 */
-        printErrorMessage(ERR_MSG_READ);
-        return NG;
-      }
-      moveBufferToListHead(buf);
-      return OK;
-    }
-    buf=buf->next;
-  }
-    fprintf(stderr, "b ");
-
-  /*なかったらバッファに読み込む*/
-  if (bufferListTail->modified==MODIFIED){
     /* lseekシステムコールによる読み出し位置の移動 */
-    if (lseek(bufferListTail->file->desc,PAGE_SIZE*bufferListTail->pageNum,SEEK_SET)==-1){
+    if (lseek(file->desc,PAGE_SIZE*pageNum,SEEK_SET)==-1){
       printErrorMessage(ERR_MSG_LSEEK);
       return NG;
     }
-    /* writeシステムコールによるファイルへのアクセス */
-    if (write(bufferListTail->file->desc, bufferListTail->page, PAGE_SIZE) < PAGE_SIZE) {
-      /* エラー処理 */
-      printErrorMessage(ERR_MSG_WRITE);
-      return NG;
-    }  
-  }
-  fprintf(stderr, "c ");
-  /*bufferListTailの内容を変更する*/
-  bufferListTail->file = file;
-  bufferListTail->pageNum=pageNum;
-  /* lseekシステムコールによる読み出し位置の移動 */
-  if (lseek(file->desc,PAGE_SIZE*pageNum,SEEK_SET)==-1){
-    printErrorMessage(ERR_MSG_LSEEK);
-    return NG;
-  }
-    fprintf(stderr, "d ");
-  /* readシステムコールによるファイルへのアクセス */
-  if (read(file->desc, bufferListTail->page, PAGE_SIZE) < PAGE_SIZE) {
-    /* エラー処理 */
-    printErrorMessage(ERR_MSG_READ);
-    return NG;
-  }
-  fprintf(stderr, "e \n");
-  if ((memcpy(page,bufferListTail->page,PAGE_SIZE))==NULL) {
-    /* エラー処理 */
-    printErrorMessage(ERR_MSG_READ);
-    return NG;
-  }
-  moveBufferToListHead(bufferListTail);
 
-  return OK;
+    /* readシステムコールによるファイルへのアクセス */
+    if (read(file->desc, page, PAGE_SIZE) < PAGE_SIZE) {
+        /* エラー処理 */
+        printErrorMessage(ERR_MSG_READ);
+        return NG;
+    }
+
+    return OK;
 
 }
 
@@ -311,51 +227,20 @@ Result readPage(File *file, int pageNum, char *page)
  */
 Result writePage(File *file, int pageNum, char *page)
 {
-  int i;
-  Buffer *buf=bufferListHead;
-  /*バッファの中にページがあるか探す*/
-  for (i = 0; i < NUM_BUFFER; i++){
-    if (buf->pageNum==pageNum && file==buf->file){
-      if ((memcpy(buf->page,page,PAGE_SIZE))==NULL) {
-        /* エラー処理 */
-        printErrorMessage(ERR_MSG_WRITE);
-        return NG;
-      }
-      buf->modified = MODIFIED;
-      moveBufferToListHead(buf);
-      return OK;
-    }
-    buf=buf->next;
-  }
-  
-  /*なかったらbufferListTailを書き戻し、読み込む*/
-  if (bufferListTail->modified==MODIFIED){
     /* lseekシステムコールによる読み出し位置の移動 */
-    if (lseek(bufferListTail->file->desc,PAGE_SIZE*bufferListTail->pageNum,SEEK_SET)==-1){
+    if (lseek(file->desc,PAGE_SIZE*pageNum,SEEK_SET)==-1){
       printErrorMessage(ERR_MSG_LSEEK);
       return NG;
     }
-    /* writeシステムコールによるファイルへのアクセス */
-    if (write(bufferListTail->file->desc, bufferListTail->page, PAGE_SIZE) < PAGE_SIZE) {
-      /* エラー処理 */
-      printErrorMessage(ERR_MSG_WRITE);
-      return NG;
-    }  
-  }
 
-  /*bufferListTailの内容を変更する*/
-  bufferListTail->file = file;
-  bufferListTail->pageNum=pageNum;
-  
-  /*バッファに書き込む*/
-  if ((memcpy(bufferListTail->page,page,PAGE_SIZE))==NULL) {
-    /* エラー処理 */
-    printErrorMessage(ERR_MSG_WRITE);
-    return NG;
-  }
-  bufferListTail->modified = MODIFIED;
-  moveBufferToListHead(bufferListTail);
-  return OK;
+    /* writeシステムコールによるファイルへのアクセス */
+    if (write(file->desc, page, PAGE_SIZE) < PAGE_SIZE) {
+        /* エラー処理 */
+        printErrorMessage(ERR_MSG_WRITE);
+        return NG;
+    }
+
+    return OK;
 
 }
 
@@ -373,13 +258,47 @@ Result writePage(File *file, int pageNum, char *page)
  */
 int getNumPages(char *filename)
 {
-  if (stat(filename, &stbuf) == -1) {
-    printErrorMessage(ERR_MSG_READ);
-    return -1;
-  }
+    if (stat(filename, &stbuf) == -1) {
+        printErrorMessage(ERR_MSG_READ);
+        return -1;
+    }
 
-  return stbuf.st_size/PAGE_SIZE;
+    return stbuf.st_size/PAGE_SIZE;
 }
+
+/*
+ * NUM_BUFFER -- ファイルアクセスモジュールが管理するバッファの大きさ(ページ数)
+ */
+#define NUM_BUFFER 4
+
+/*
+ * modifyFlag -- 変更フラグ
+ */
+typedef enum { UNMODIFIED = 0, MODIFIED = 1 } modifyFlag;
+
+/*
+ * Buffer -- 1ページ分のバッファを記憶する構造体
+ */
+typedef struct Buffer Buffer;
+struct Buffer {
+    File *file;   /* バッファの内容が格納されたファイル */
+                    /* file == NULLならこのバッファは未使用 */
+    int pageNum;            /* ページ番号 */
+    char page[PAGE_SIZE];       /* ページの内容を格納する配列 */
+    struct Buffer *prev;        /* 一つ前のバッファへのポインタ */
+    struct Buffer *next;        /* 一つ後ろのバッファへのポインタ */
+    modifyFlag modified;        /* ページの内容が更新されたかどうかを示すフラグ */
+};
+
+/*
+ * bufferListHead -- LRUリストの先頭へのポインタ
+ */
+static Buffer *bufferListHead = NULL;
+
+/*
+ * bufferListTail -- LRUリストの最後へのポインタ
+ */
+static Buffer *bufferListTail = NULL;
 
 /*
  * initializeBufferList -- バッファリストの初期化
@@ -413,7 +332,7 @@ static Result initializeBufferList()
 
     /* Buffer構造体の初期化 */
     buf->file = NULL;
-    buf->pageNum = UNDEFINED;
+    buf->pageNum = -1;
     buf->modified = UNMODIFIED;
     memset(buf->page, 0, PAGE_SIZE);
     buf->prev = NULL;
@@ -456,23 +375,15 @@ static Result initializeBufferList()
  *  終了処理に成功すればOK、失敗すればNGを返す。
  */
 static Result finalizeBufferList()
-{      
-  int i;
+{  
   Buffer *buf=bufferListHead;   
   Buffer *nbuffer = NULL;
   for (i = 0; i < NUM_BUFFER; i++){
-    if (buf->modified==1){
-      if(writePage(buf->file,buf->pageNum,buf->page)==NG){
-        return NG;
-      }        
-    }
-
     nbuffer=buf->next;
-    free(buf);
-    buf=nbuffer;
-    bufferListHead=buf;
+    if (buf->modified==1){
+          
+    }  
   }
-  return OK;
 }
 
 /*
@@ -486,22 +397,13 @@ static Result finalizeBufferList()
  */
 static void moveBufferToListHead(Buffer *buf)
 {
-  int i;
-  Buffer *nbuffer;
   if (bufferListHead==buf){
      
   }else if (bufferListTail==buf){
-    bufferListTail = bufferListTail->prev;
-    bufferListTail->next = NULL;
+    buf->prev.next = NULL;
+    bufferListTail = buf->prev;
     buf->next = bufferListHead;
     bufferListHead -> prev = buf;
     bufferListHead = buf;
-  }else{
-    buf->prev->next = buf->next;
-    buf->next->prev = buf->prev;
-    buf->next=bufferListHead;
-    bufferListHead->prev=buf;
-    buf->prev = NULL;
-    bufferListHead=buf;
   }
 }

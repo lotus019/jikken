@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 #include "microdb.h"
 
 /*
@@ -516,10 +518,10 @@ Condition *analizeCond(TableInfo *tableInfo){
   }
 
   if ((token = getNextToken()) != NULL) {
-    if (strcmp("&&",token)==0){
+    if ((strcmp("&&",token)==0)||(strcmp("and",token)==0)){
       condition->orCondition = NULL;
       condition->andCondition = analizeCond(tableInfo);
-    }else if (strcmp("||",token)==0){
+    }else if ((strcmp("||",token)==0)||(strcmp("or",token)==0)){
       condition->andCondition = NULL;
       condition->orCondition = analizeCond(tableInfo);
     }else{
@@ -693,23 +695,24 @@ int main()
 {
     char input[MAX_INPUT];
     char *token;
+    char *line;
 
     /* ファイルモジュールの初期化 */
     if (initializeFileModule() != OK) {
-	fprintf(stderr, "Cannot initialize file module.\n");
-	exit(1);
+	    fprintf(stderr, "Cannot initialize file module.\n");
+	    exit(1);
     }
 
     /* データ定義ジュールの初期化 */
     if (initializeDataDefModule() != OK) {
-	fprintf(stderr, "Cannot initialize data definition module.\n");
-	exit(1);
+	    fprintf(stderr, "Cannot initialize data definition module.\n");
+	    exit(1);
     }
 
     /* データ操作ジュールの初期化 */
     if (initializeDataManipModule() != OK) {
-	fprintf(stderr, "Cannot initialize data manipulation module.\n");
-	exit(1);
+	    fprintf(stderr, "Cannot initialize data manipulation module.\n");
+	    exit(1);
     }
 
     /* ウェルカムメッセージを出力 */
@@ -717,52 +720,58 @@ int main()
 
     /* 1行ずつ入力を読み込みながら、処理を行う */
     for(;;) {
-	/* プロンプトの出力 */
-	printf("\nDDLまたはDMLを入力してください。\n");
-	printf("> ");
+	    /* プロンプトを出力して、キーボード入力を1行読み込む */
+      printf("\nDDLまたはDMLを入力してください。\n");
+      line = readline("> ");
 
-	/* キーボード入力を1行読み込む */
-	fgets(input, MAX_INPUT, stdin);
+	  /* EOFになったら終了 */
+    if (line == NULL) {
+      printf("マイクロDBMSを終了します。\n\n");
+      break;
+    }
 
-	/* 入力の最後の改行を取り除く */
-	if (strchr(input, '\n') != NULL) {
-	    *(strchr(input, '\n')) = '\0';
-	}
+	  /* 字句解析するために入力文字列を設定する */
+    strncpy(input,line,MAX_INPUT);
+  	setInputString(input);
 
-	/* 字句解析するために入力文字列を設定する */
-	setInputString(input);
+    /* 入力の履歴を保存する */
+    if (line && *line) {
+      add_history(line);
+    }
 
-	/* 最初のトークンを取り出す */
-	token = getNextToken();
+    free(line);
 
-	/* 入力が空行だったら、ループの先頭に戻ってやり直し */
-	if (token == NULL) {
+  	/* 最初のトークンを取り出す */
+	  token = getNextToken();
+
+	  /* 入力が空行だったら、ループの先頭に戻ってやり直し */
+	  if (token == NULL) {
 	    continue;
-	}
+	  }
 
-	/* 入力が"quit"だったら、ループを抜けてプログラムを終了させる */
-	if (strcmp(token, "quit") == 0) {
+  	/* 入力が"quit"だったら、ループを抜けてプログラムを終了させる */
+  	if (strcmp(token, "quit") == 0) {
 	    printf("マイクロDBMSを終了します。\n\n");
 	    break;
-	}
+  	}
 
-	/* 最初のトークンが何かによって、呼び出す関数を決める */
-	if (strcmp(token, "create") == 0) {
+  	/* 最初のトークンが何かによって、呼び出す関数を決める */
+  	if (strcmp(token, "create") == 0) {
 	    callCreateTable();
-	} else if (strcmp(token, "drop") == 0) {
+  	} else if (strcmp(token, "drop") == 0) {
 	    callDropTable();
-	} else if (strcmp(token, "insert") == 0) {
+  	} else if (strcmp(token, "insert") == 0) {
 	    callInsertRecord();
-	} else if (strcmp(token, "select") == 0) {
+  	} else if (strcmp(token, "select") == 0) {
 	    callSelectRecord();
-	} else if (strcmp(token, "delete") == 0) {
+  	} else if (strcmp(token, "delete") == 0) {
 	    callDeleteRecord();
-	} else {
+  	} else {
 	    /* 入力に間違いがあった */
 	    printf("入力に間違いがあります。\n");
 	    printf("もう一度入力し直してください。\n\n");
-	}
-    }
+  	}
+  }
 
     /* 各モジュールの終了処理 */
     finalizeDataManipModule();

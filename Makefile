@@ -6,16 +6,18 @@ CFLAGS = -g
 all: microdb all-test
 
 # すべてのテストプログラムを作るルール
-all-test: test-file
+all-test: test-file test-datadef test-datamanip
 
 # すべてのテストプログラムを実行するルール
-do-test: test-file
+do-test: test-file test-datadef test-datamanip
 	./test-file
+	./test-datadef
+	./test-datamanip
 
 # 「microdb」を作成するためのルールは、今後追加される予定
 # とりあえず、今のところは「何もしない」という設定にしておく。
 microdb:main.o file.o datadef.o datamanip.o
-	$(CC) -o microdb $(CFLAGS) main.o datadef.o datamanip.o file.o
+	$(CC) -o microdb $(CFLAGS) main.o datadef.o datamanip.o file.o -lreadline -lcurses
 
 main.o: main.c microdb.h
 	$(CC) -o main.o $(CFLAGS) -c main.c

@@ -124,7 +124,8 @@ Result test2()
 {
     /* ファイルの正しいページ数が得られるかどうかをチェック */
     if (getNumPages(TEST_FILE1) != FILE_SIZE) {
-	fprintf(stderr, "Number of pages is wrong.\n");
+    fprintf(stderr,"%d", getNumPages(TEST_FILE1));
+	fprintf(stderr, "Number of pages is wrong. \n");
 	return NG;
     }
 
@@ -261,6 +262,7 @@ int main(int argc, char **argv)
     } else {
 	fprintf(stderr, "%s: test 2: NG\n\n", TEST_NAME);
     }
+
 
     fprintf(stderr, "%s: test 3: Start\n", TEST_NAME);
     if (test3() == OK) {

@@ -130,13 +130,6 @@ struct Condition {
     struct Condition *orCondition;
 };
 
-/*
- * ColumnData　表示する列の名前
- *//*
-typedef struct ColumnData ColumnData;
-struct ColumnData {
-    char name[MAX_FIELD][MAX_FIELD_NAME];   */ /* フィールド名 */
-//};
 
 /*
  * file.cに定義されている関数群
@@ -151,7 +144,6 @@ extern Result closeFile(File *);
 extern Result readPage(File *, int, char *);
 extern Result writePage(File *, int, char *);
 extern int getNumPages(char *);
-
 
 /*
  * datadef.cに定義されている関数群

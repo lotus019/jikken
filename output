@@ -1,0 +1,83 @@
+./test-file
+  File  1, Page  4: OK
+  File  1, Page  0: OK
+  File  1, Page  1: OK
+  File  1, Page  4: OK
+  File  1, Page  0: OK
+  File  1, Page  5: OK
+  File  1, Page  5: OK
+  File  1, Page  5: OK
+  File  1, Page  9: OK
+  File  0, Page  0: OK
+  File  0, Page  8: OK
+  File  0, Page  3: OK
+  File  0, Page  8: OK
+  File  0, Page  4: OK
+  File  0, Page  6: OK
+  File  1, Page  8: OK
+  File  0, Page  2: OK
+  File  0, Page  6: OK
+  File  0, Page  7: OK
+  File  0, Page  8: OK
+  File  1, Page  1: OK
+  File  1, Page  9: OK
+  File  1, Page  1: OK
+  File  0, Page  6: OK
+  File  1, Page  7: OK
+  File  1, Page  6: OK
+  File  0, Page  8: OK
+  File  0, Page  0: OK
+  File  1, Page  8: OK
+  File  0, Page  0: OK
+./test-datadef
+
+Table student
+number of fields = 4
+  field 1: name = id, data type = string
+  field 2: name = name, data type = string
+  field 3: name = age, data type = integer
+  field 4: name = address, data type = string
+
+Table teacher
+number of fields = 6
+  field 1: name = id, data type = string
+  field 2: name = name, data type = string
+  field 3: name = title, data type = string
+  field 4: name = age, data type = integer
+  field 5: name = address, data type = string
+  field 6: name = class, data type = integer
+./test-datamanip
+age > 17
+Number of Records: 8
++---------------+---------------+---------------+---------------+
+|id             |name           |age            |address        |
++---------------+---------------+---------------+---------------+
+|i00001         |Donald         |              9|Urayasu        |
+|i00001         |Minnie         |              8|Urayasu        |
+|i00001         |Donald         |              6|Urayasu        |
+|i00001         |Minnie         |              5|Urayasu        |
+|i00001         |Mickey         |              4|Urayasu        |
+|i00001         |Donald         |              3|Urayasu        |
+|i00001         |Minnie         |              2|Urayasu        |
+|i00001         |Donald         |              0|Urayasu        |
++---------------+---------------+---------------+---------------+
+address != 'Florida'
+Number of Records: 7
++---------------+---------------+---------------+---------------+
+|id             |name           |age            |address        |
++---------------+---------------+---------------+---------------+
+|i00001         |Donald         |              9|Urayasu        |
+|i00001         |Minnie         |              8|Urayasu        |
+|i00001         |Donald         |              6|Urayasu        |
+|i00001         |Minnie         |              5|Urayasu        |
+|i00001         |Donald         |              3|Urayasu        |
+|i00001         |Minnie         |              2|Urayasu        |
+|i00001         |Donald         |              0|Urayasu        |
++---------------+---------------+---------------+---------------+
++---------------+---------------+---------------+---------------+
+|id             |name           |age            |address        |
++---------------+---------------+---------------+---------------+
+|i00001         |Mickey         |              1|Urayasu        |
+|i00001         |Mickey         |              4|Urayasu        |
+|i00001         |Mickey         |              7|Urayasu        |
++---------------+---------------+---------------+---------------+

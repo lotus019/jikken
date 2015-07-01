@@ -214,6 +214,26 @@ File *openFile(char *filename)
  */
 Result closeFile(File *file)
 {
+  int i;
+  Buffer *buf=bufferListHead;
+
+  for (i = 0; i < NUM_BUFFER; i++){
+    if (file==buf->file){
+      if (lseek(file->desc,PAGE_SIZE*buf->pageNum,SEEK_SET)==-1){
+        printErrorMessage(ERR_MSG_LSEEK);
+        return NG;
+      }
+      /* writeシステムコールによるファイルへのアクセス */
+      if (write(file->desc, buf->page, PAGE_SIZE) < PAGE_SIZE) {
+        /* エラー処理 */
+        printErrorMessage(ERR_MSG_WRITE);
+        return NG;
+      }
+      buf->modified=UNMODIFIED;  
+    }
+    buf=buf->next;
+  }
+
   if (close(file->desc) == -1) {
     printErrorMessage(ERR_MSG_CLOSE);
     return NG;
@@ -238,7 +258,6 @@ Result closeFile(File *file)
  */
 Result readPage(File *file, int pageNum, char *page)
 {
-  fprintf(stderr, "a ");
   int i;
   Buffer *buf=bufferListHead;
   /*バッファの中にページがあるか探す*/
@@ -254,7 +273,7 @@ Result readPage(File *file, int pageNum, char *page)
     }
     buf=buf->next;
   }
-    fprintf(stderr, "b ");
+
 
   /*なかったらバッファに読み込む*/
   if (bufferListTail->modified==MODIFIED){
@@ -270,7 +289,6 @@ Result readPage(File *file, int pageNum, char *page)
       return NG;
     }  
   }
-  fprintf(stderr, "c ");
   /*bufferListTailの内容を変更する*/
   bufferListTail->file = file;
   bufferListTail->pageNum=pageNum;
@@ -279,14 +297,13 @@ Result readPage(File *file, int pageNum, char *page)
     printErrorMessage(ERR_MSG_LSEEK);
     return NG;
   }
-    fprintf(stderr, "d ");
+
   /* readシステムコールによるファイルへのアクセス */
   if (read(file->desc, bufferListTail->page, PAGE_SIZE) < PAGE_SIZE) {
     /* エラー処理 */
     printErrorMessage(ERR_MSG_READ);
     return NG;
   }
-  fprintf(stderr, "e \n");
   if ((memcpy(page,bufferListTail->page,PAGE_SIZE))==NULL) {
     /* エラー処理 */
     printErrorMessage(ERR_MSG_READ);

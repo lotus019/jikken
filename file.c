@@ -260,6 +260,8 @@ Result readPage(File *file, int pageNum, char *page)
 {
   int i;
   Buffer *buf=bufferListHead;
+  Buffer *emptyBuffer=NULL;
+
   /*バッファの中にページがあるか探す*/
   for (i = 0; i < NUM_BUFFER; i++){
     if (buf->pageNum==pageNum && file==buf->file){
@@ -271,12 +273,14 @@ Result readPage(File *file, int pageNum, char *page)
       moveBufferToListHead(buf);
       return OK;
     }
+    if (buf->modified==UNMODIFIED && emptyBuffer==NULL){
+      emptyBuffer = buf;
+    }
     buf=buf->next;
   }
 
-
   /*なかったらバッファに読み込む*/
-  if (bufferListTail->modified==MODIFIED){
+  if (emptyBuffer==NULL){
     /* lseekシステムコールによる読み出し位置の移動 */
     if (lseek(bufferListTail->file->desc,PAGE_SIZE*bufferListTail->pageNum,SEEK_SET)==-1){
       printErrorMessage(ERR_MSG_LSEEK);
@@ -287,11 +291,14 @@ Result readPage(File *file, int pageNum, char *page)
       /* エラー処理 */
       printErrorMessage(ERR_MSG_WRITE);
       return NG;
-    }  
+    }
+    bufferListTail->modified = UNMODIFIED;
+    emptyBuffer = bufferListTail;  
   }
+
   /*bufferListTailの内容を変更する*/
-  bufferListTail->file = file;
-  bufferListTail->pageNum=pageNum;
+  emptyBuffer->file = file;
+  emptyBuffer->pageNum=pageNum;
   /* lseekシステムコールによる読み出し位置の移動 */
   if (lseek(file->desc,PAGE_SIZE*pageNum,SEEK_SET)==-1){
     printErrorMessage(ERR_MSG_LSEEK);
@@ -299,17 +306,18 @@ Result readPage(File *file, int pageNum, char *page)
   }
 
   /* readシステムコールによるファイルへのアクセス */
-  if (read(file->desc, bufferListTail->page, PAGE_SIZE) < PAGE_SIZE) {
+  if (read(file->desc, emptyBuffer->page, PAGE_SIZE) < PAGE_SIZE) {
     /* エラー処理 */
     printErrorMessage(ERR_MSG_READ);
     return NG;
   }
-  if ((memcpy(page,bufferListTail->page,PAGE_SIZE))==NULL) {
+
+  if ((memcpy(page,emptyBuffer->page,PAGE_SIZE))==NULL) {
     /* エラー処理 */
     printErrorMessage(ERR_MSG_READ);
     return NG;
   }
-  moveBufferToListHead(bufferListTail);
+  moveBufferToListHead(emptyBuffer);
 
   return OK;
 
@@ -330,6 +338,7 @@ Result writePage(File *file, int pageNum, char *page)
 {
   int i;
   Buffer *buf=bufferListHead;
+  Buffer *emptyBuffer=NULL;
   /*バッファの中にページがあるか探す*/
   for (i = 0; i < NUM_BUFFER; i++){
     if (buf->pageNum==pageNum && file==buf->file){
@@ -342,11 +351,14 @@ Result writePage(File *file, int pageNum, char *page)
       moveBufferToListHead(buf);
       return OK;
     }
+    if (buf->modified==UNMODIFIED && emptyBuffer==NULL){
+      emptyBuffer = buf;
+    }
     buf=buf->next;
   }
   
   /*なかったらbufferListTailを書き戻し、読み込む*/
-  if (bufferListTail->modified==MODIFIED){
+  if (emptyBuffer==NULL){
     /* lseekシステムコールによる読み出し位置の移動 */
     if (lseek(bufferListTail->file->desc,PAGE_SIZE*bufferListTail->pageNum,SEEK_SET)==-1){
       printErrorMessage(ERR_MSG_LSEEK);
@@ -358,20 +370,22 @@ Result writePage(File *file, int pageNum, char *page)
       printErrorMessage(ERR_MSG_WRITE);
       return NG;
     }  
+    bufferListTail->modified=UNMODIFIED;
+    emptyBuffer=bufferListTail;
   }
 
   /*bufferListTailの内容を変更する*/
-  bufferListTail->file = file;
-  bufferListTail->pageNum=pageNum;
+  emptyBuffer->file = file;
+  emptyBuffer->pageNum=pageNum;
   
   /*バッファに書き込む*/
-  if ((memcpy(bufferListTail->page,page,PAGE_SIZE))==NULL) {
+  if ((memcpy(emptyBuffer->page,page,PAGE_SIZE))==NULL) {
     /* エラー処理 */
     printErrorMessage(ERR_MSG_WRITE);
     return NG;
   }
-  bufferListTail->modified = MODIFIED;
-  moveBufferToListHead(bufferListTail);
+  emptyBuffer->modified = MODIFIED;
+  moveBufferToListHead(emptyBuffer);
   return OK;
 
 }

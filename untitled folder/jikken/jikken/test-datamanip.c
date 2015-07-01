@@ -23,7 +23,6 @@ Result test1()
      */
 for (j = 0; j < 10; j++){
         i = 0;
-
     strcpy(record.fieldData[i].name, "id");
     record.fieldData[i].dataType = TYPE_STRING;
     strcpy(record.fieldData[i].valueSet.stringValue, "i00001");

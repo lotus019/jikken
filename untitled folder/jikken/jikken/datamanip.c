@@ -205,8 +205,6 @@ Result insertRecord(char *tableName, RecordData *recordData)
       return NG;
     }
 
-
-    closeFile(file);
     free(record);
     return OK;
 }

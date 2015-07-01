@@ -1,13 +1,34 @@
-age > 17
-Number of Records: 0
-address != 'Florida'
-Number of Records: 1
+name != Mickey or age=4
+Number of Records: 8
 +---------------+---------------+---------------+---------------+
 |id             |name           |age            |address        |
 +---------------+---------------+---------------+---------------+
 |i00001         |Donald         |              9|Urayasu        |
+|i00001         |Minnie         |              8|Urayasu        |
+|i00001         |Donald         |              6|Urayasu        |
+|i00001         |Minnie         |              5|Urayasu        |
+|i00001         |Mickey         |              4|Urayasu        |
+|i00001         |Donald         |              3|Urayasu        |
+|i00001         |Minnie         |              2|Urayasu        |
+|i00001         |Donald         |              0|Urayasu        |
++---------------+---------------+---------------+---------------+
+name != 'Mickey'
+Number of Records: 7
++---------------+---------------+---------------+---------------+
+|id             |name           |age            |address        |
++---------------+---------------+---------------+---------------+
+|i00001         |Donald         |              9|Urayasu        |
+|i00001         |Minnie         |              8|Urayasu        |
+|i00001         |Donald         |              6|Urayasu        |
+|i00001         |Minnie         |              5|Urayasu        |
+|i00001         |Donald         |              3|Urayasu        |
+|i00001         |Minnie         |              2|Urayasu        |
+|i00001         |Donald         |              0|Urayasu        |
 +---------------+---------------+---------------+---------------+
 +---------------+---------------+---------------+---------------+
 |id             |name           |age            |address        |
 +---------------+---------------+---------------+---------------+
+|i00001         |Mickey         |              1|Urayasu        |
+|i00001         |Mickey         |              4|Urayasu        |
+|i00001         |Mickey         |              7|Urayasu        |
 +---------------+---------------+---------------+---------------+

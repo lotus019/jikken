@@ -47,7 +47,6 @@ char *errorMessage[] = {
  */
 #define NUM_BUFFER 4
 #define UNDEFINED -1
-#define NUM_FILE 4
 
 /*
  * modifyFlag -- 変更フラグ
@@ -83,31 +82,6 @@ static Buffer *bufferListHead = NULL;
 static Buffer *bufferListTail = NULL;
 
 /*
- * OFile -- 開いているファイルを記憶する構造体
- */
-typedef struct OFile OFile;
-struct OFile {
-  File *file;   /* バッファの内容が格納されたファイル */
-                    /* file == NULLならこのバッファは未使用 */
-  struct OFile *prev;        /* 一つ前のバッファへのポインタ */
-  struct OFile *next;        /* 一つ後ろのバッファへのポインタ */
-};
-
-static Result initializeFileList();
-static Result finalizeFileList();
-static void moveFileToListHead(OFile *ofile);
-
-/*
- * FileListHead -- LRUリストの先頭へのポインタ
- */
-static OFile *FileListHead = NULL;
-
-/*
- * FileListTail -- LRUリストの最後へのポインタ
- */
-static OFile *FileListTail = NULL;
-
-/*
  * printErrorMessage -- エラーメッセージの表示
  *
  * 引数:
@@ -120,18 +94,18 @@ void printErrorMessage(ErrorMessageNo messageNo) {
   printf("Error: %s\n", errorMessage[messageNo]);
 }
 
+
 /*
  * initializeFileModule -- ファイルアクセスモジュールの初期化処理
  *
  * 引数:
- *	なし
+ *  なし
  *
  * 返り値:
- *	成功の場合OK、失敗の場合NG
+ *  成功の場合OK、失敗の場合NG
  */
 Result initializeFileModule()
 {
-  initializeFileList();
   initializeBufferList();
   return OK;
 }
@@ -140,29 +114,14 @@ Result initializeFileModule()
  * finalizeFileModule -- ファイルアクセスモジュールの終了処理
  *
  * 引数:
- *	なし
+ *  なし
  *
  * 返り値:
- *	成功の場合OK、失敗の場合NG
+ *  成功の場合OK、失敗の場合NG
  */
 Result finalizeFileModule()
 {
-  OFile *ofile=FileListHead;
-  OFile *nextFile;
-  int i;
-
   finalizeBufferList();
-
-  for (i = 0; i < NUM_FILE; i++){
-    if (ofile->file!=NULL){
-      /* File構造体の解放 */
-      free(file);
-    }
-    nextFile=ofile->next;
-    free(ofile);
-    ofile=nextFile;
-  }
-
   return OK;
 }
 
@@ -170,10 +129,10 @@ Result finalizeFileModule()
  * createFile -- ファイルの作成
  *
  * 引数:
- *	filename: 作成するファイルのファイル名
+ *  filename: 作成するファイルのファイル名
  *
  * 返り値:
- *	成功の場合OK、失敗の場合NG
+ *  成功の場合OK、失敗の場合NG
  */
 Result createFile(char *filename)
 {
@@ -191,7 +150,7 @@ Result createFile(char *filename)
  *  filename: 削除するファイルのファイル名
  *
  * 返り値:
- *	成功の場合OK、失敗の場合NG
+ *  成功の場合OK、失敗の場合NG
  */
 Result deleteFile(char *filename)
 {
@@ -207,39 +166,18 @@ Result deleteFile(char *filename)
 }
 
 /*
- * openFile --　ファイルのオープン
+ * openFile -- ファイルのオープン
  *
  * 引数:
- *	filename: オープンするファイルのファイル名
+ *  filename: オープンするファイルのファイル名
  *
  * 返り値:
- *	オープンしたファイルのFile構造体
- *	オープンに失敗した場合にはNULLを返す
+ *  オープンしたファイルのFile構造体
+ *  オープンに失敗した場合にはNULLを返す
  */
 File *openFile(char *filename)
 {
   File *file;
-  OFile *ofile=FileListHead;
-  OFile *emptyFile=NULL;
-  int i;
-
-  for (i = 0; i < NUM_FILE; i++){
-    if (ofile->file!=NULL){
-      if (strcmp(ofile->file->name,filename)==0){
-        moveFileToListHead(ofile);
-        return ofile->file;
-      }
-    }
-    if (ofile->file==NULL && emptyFile==NULL){
-      emptyFile = ofile;
-    }
-    ofile = ofile->next;
-  }
-
-  if (emptyFile==NULL){
-    closeFile(FileListTail->file);
-    emptyFile = FileListTail;
-  }
 
   /* File構造体の用意 */
   file = malloc(sizeof(File));
@@ -257,15 +195,10 @@ File *openFile(char *filename)
     return NULL;
   }
 
-
   /*
-  *データの入力
+  *データの入力：ファイル名
   */
-  emptyFile->file = file;
   strcpy(file->name,filename);
-
-  moveFileToListHead(emptyFile);
-
 
   return file;
 }
@@ -274,10 +207,10 @@ File *openFile(char *filename)
  * closeFile -- ファイルのクローズ
  *
  * 引数:
- *	クローズするファイルのFile構造体
+ *  クローズするファイルのFile構造体
  *
  * 返り値:
- *	成功の場合OK、失敗の場合NG
+ *  成功の場合OK、失敗の場合NG
  */
 Result closeFile(File *file)
 {
@@ -300,21 +233,28 @@ Result closeFile(File *file)
     }
     buf=buf->next;
   }
+
+  if (close(file->desc) == -1) {
+    printErrorMessage(ERR_MSG_CLOSE);
+    return NG;
+  }
+  
+  /* File構造体の解放 */
+  free(file);
     
   return OK;
 }
-
 
 /*
  * readPage -- 1ページ分のデータのファイルからの読み出し
  *
  * 引数:
- *	file: アクセスするファイルのFile構造体
- *	pageNum: 読み出すページの番号
- *	page: 読み出した内容を格納するPAGE_SIZEバイトの領域
+ *  file: アクセスするファイルのFile構造体
+ *  pageNum: 読み出すページの番号
+ *  page: 読み出した内容を格納するPAGE_SIZEバイトの領域
  *
  * 返り値:
- *	成功の場合OK、失敗の場合NG
+ *  成功の場合OK、失敗の場合NG
  */
 Result readPage(File *file, int pageNum, char *page)
 {
@@ -387,12 +327,12 @@ Result readPage(File *file, int pageNum, char *page)
  * writePage -- 1ページ分のデータのファイルへの書き出し
  *
  * 引数:
- *	file: アクセスするファイルのFile構造体
- *	pageNum: 書き出すページの番号
- *	page: 書き出す内容を格納するPAGE_SIZEバイトの領域
+ *  file: アクセスするファイルのFile構造体
+ *  pageNum: 書き出すページの番号
+ *  page: 書き出す内容を格納するPAGE_SIZEバイトの領域
  *
  * 返り値:
- *	成功の場合OK、失敗の場合NG
+ *  成功の場合OK、失敗の場合NG
  */
 Result writePage(File *file, int pageNum, char *page)
 {
@@ -444,6 +384,7 @@ Result writePage(File *file, int pageNum, char *page)
     printErrorMessage(ERR_MSG_WRITE);
     return NG;
   }
+
   emptyBuffer->modified = MODIFIED;
   moveBufferToListHead(emptyBuffer);
   return OK;
@@ -456,11 +397,11 @@ Result writePage(File *file, int pageNum, char *page)
  * getNumPage -- ファイルのページ数の取得
  *
  * 引数:
- *	filename: ファイル名
+ *  filename: ファイル名
  *
  * 返り値:
- *	引数で指定されたファイルの大きさ(ページ数)
- *	エラーの場合には-1を返す
+ *  引数で指定されたファイルの大きさ(ページ数)
+ *  エラーの場合には-1を返す
  */
 int getNumPages(char *filename)
 {
@@ -578,6 +519,7 @@ static Result finalizeBufferList()
 static void moveBufferToListHead(Buffer *buf)
 {
   int i;
+  Buffer *nbuffer;
   if (bufferListHead==buf){
      
   }else if (bufferListTail==buf){
@@ -593,126 +535,5 @@ static void moveBufferToListHead(Buffer *buf)
     bufferListHead->prev=buf;
     buf->prev = NULL;
     bufferListHead=buf;
-  }
-}
-
-/*
- * initializeFileList -- ファイルリストの初期化
- *
- * **注意**
- *  この関数は、ファイルアクセスモジュールを使用する前に必ず一度だけ呼び出すこと。
- *  (initializeFileModule()から呼び出すこと。)
- *
- * 引数:
- *  なし
- *
- * 返り値:
- *  初期化に成功すればOK、失敗すればNGを返す。
- */
-static Result initializeFileList()
-{
-  OFile *oldFile = NULL;
-  OFile *ofile;
-  int i;
-
-  /*
-   * NUM_File個分のバッファを用意し、
-   * ポインタをつないで両方向リストにする
-  */
-  for (i = 0; i < NUM_FILE; i++) {
-    /* 1個分のバッファ(OFile構造体)のメモリ領域の確保 */
-    if ((ofile = (OFile *) malloc(sizeof(OFile))) == NULL) {
-      /* メモリ不足なのでエラーを返す */
-      return NG;
-    }
-
-    /* OFile構造体の初期化 */
-    ofile->file = NULL;
-    ofile->prev = NULL;
-    ofile->next = NULL;
-
-    /* ポインタをつないで両方向リストにする */
-    if (oldFile != NULL) {
-        oldFile->next = ofile;
-    }
-    ofile->prev = oldFile;
-
-    /* リストの一番最初の要素へのポインタを保存 */
-    if (ofile->prev == NULL) {
-        FileListHead = ofile;
-    }
-
-    /* リストの一番最後の要素へのポインタを保存 */
-    if (i == NUM_FILE - 1) {
-        FileListTail = ofile;
-    }
-
-    /* 次のループのために保存 */
-    oldFile = ofile;
-  }
-
-  return OK;
-}
-
-/*
- * finalizeBufferList -- バッファリストの終了処理
- *
- * **注意**
- *  この関数は、ファイルアクセスモジュールの使用後に必ず一度だけ呼び出すこと。
- *  (finalizeFileModule()から呼び出すこと。)
- *
- * 引数:
- *  なし
- *
- * 返り値:
- *  終了処理に成功すればOK、失敗すればNGを返す。
- */
-static Result finalizeFileList()
-{      
-  int i;
-  Buffer *buf=bufferListHead;   
-  Buffer *nbuffer = NULL;
-  for (i = 0; i < NUM_BUFFER; i++){
-    if (buf->modified==1){
-      if(writePage(buf->file,buf->pageNum,buf->page)==NG){
-        return NG;
-      }        
-    }
-
-    nbuffer=buf->next;
-    free(buf);
-    buf=nbuffer;
-    bufferListHead=buf;
-  }
-  return OK;
-}
-
-/*
- * moveBufferToListHead -- バッファをリストの先頭へ移動
- *
- * 引数:
- *  buf: リストの先頭に移動させるバッファへのポインタ
- *
- * 返り値:
- *  なし
- */
-static void moveFileToListHead(OFile *ofile)
-{
-  int i;
-  if (FileListHead==ofile){
-     
-  }else if (FileListTail==ofile){
-    FileListTail = FileListTail->prev;
-    FileListTail->next = NULL;
-    ofile->next = FileListHead;
-    FileListHead -> prev = ofile;
-    FileListHead = ofile;
-  }else{
-    ofile->prev->next = ofile->next;
-    ofile->next->prev = ofile->prev;
-    ofile->next=FileListHead;
-    FileListHead->prev=ofile;
-    ofile->prev = NULL;
-    FileListHead=ofile;
   }
 }

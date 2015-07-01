@@ -1,4 +1,4 @@
-age > 17
+name != Mickey or age=4
 Number of Records: 8
 +---------------+---------------+---------------+---------------+
 |id             |name           |age            |address        |
@@ -12,7 +12,7 @@ Number of Records: 8
 |i00001         |Minnie         |              2|Urayasu        |
 |i00001         |Donald         |              0|Urayasu        |
 +---------------+---------------+---------------+---------------+
-address != 'Florida'
+name != 'Mickey'
 Number of Records: 7
 +---------------+---------------+---------------+---------------+
 |id             |name           |age            |address        |

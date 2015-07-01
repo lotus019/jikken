@@ -1,0 +1,16 @@
+
+Table student
+number of fields = 4
+  field 1: name = id, data type = string
+  field 2: name = name, data type = string
+  field 3: name = age, data type = integer
+  field 4: name = address, data type = string
+
+Table teacher
+number of fields = 6
+  field 1: name = id, data type = string
+  field 2: name = name, data type = string
+  field 3: name = title, data type = string
+  field 4: name = age, data type = integer
+  field 5: name = address, data type = string
+  field 6: name = class, data type = integer

@@ -71,6 +71,7 @@ struct Buffer {
 static Result initializeBufferList();
 static Result finalizeBufferList();
 static void moveBufferToListHead(Buffer *buf);
+void printBufferList();
 
 /*
  * bufferListHead -- LRUリストの先頭へのポインタ
@@ -152,11 +153,14 @@ Result finalizeFileModule()
   int i;
 
   finalizeBufferList();
-
   for (i = 0; i < NUM_FILE; i++){
     if (ofile->file!=NULL){
+      if (close(ofile->file->desc) == -1) {
+        printErrorMessage(ERR_MSG_CLOSE);
+        return NG;
+      }
       /* File構造体の解放 */
-      free(file);
+      free(ofile->file);
     }
     nextFile=ofile->next;
     free(ofile);
@@ -281,25 +285,6 @@ File *openFile(char *filename)
  */
 Result closeFile(File *file)
 {
-  int i;
-  Buffer *buf=bufferListHead;
-
-  for (i = 0; i < NUM_BUFFER; i++){
-    if (file==buf->file){
-      if (lseek(file->desc,PAGE_SIZE*buf->pageNum,SEEK_SET)==-1){
-        printErrorMessage(ERR_MSG_LSEEK);
-        return NG;
-      }
-      /* writeシステムコールによるファイルへのアクセス */
-      if (write(file->desc, buf->page, PAGE_SIZE) < PAGE_SIZE) {
-        /* エラー処理 */
-        printErrorMessage(ERR_MSG_WRITE);
-        return NG;
-      }
-      buf->modified=UNMODIFIED;  
-    }
-    buf=buf->next;
-  }
     
   return OK;
 }
@@ -333,7 +318,7 @@ Result readPage(File *file, int pageNum, char *page)
       moveBufferToListHead(buf);
       return OK;
     }
-    if (buf->modified==UNMODIFIED && emptyBuffer==NULL){
+    if (buf->file==NULL && emptyBuffer==NULL){
       emptyBuffer = buf;
     }
     buf=buf->next;
@@ -411,7 +396,7 @@ Result writePage(File *file, int pageNum, char *page)
       moveBufferToListHead(buf);
       return OK;
     }
-    if (buf->modified==UNMODIFIED && emptyBuffer==NULL){
+    if (buf->file==NULL && emptyBuffer==NULL){
       emptyBuffer = buf;
     }
     buf=buf->next;
@@ -464,6 +449,28 @@ Result writePage(File *file, int pageNum, char *page)
  */
 int getNumPages(char *filename)
 {
+  int i;
+  Buffer *buf=bufferListHead;
+
+  for (i = 0; i < NUM_BUFFER; i++){
+    if (buf->modified==MODIFIED){
+      if (strcmp(filename,buf->file->name)==0){
+        if (lseek(buf->file->desc,PAGE_SIZE*buf->pageNum,SEEK_SET)==-1){
+          printErrorMessage(ERR_MSG_LSEEK);
+          return NG;
+        }
+        /* writeシステムコールによるファイルへのアクセス */
+        if (write(buf->file->desc, buf->page, PAGE_SIZE) < PAGE_SIZE) {
+          /* エラー処理 */
+          printErrorMessage(ERR_MSG_WRITE);
+          return NG;
+        }
+        buf->modified=UNMODIFIED;  
+      }
+      
+    }
+    buf=buf->next;
+  }
   if (stat(filename, &stbuf) == -1) {
     printErrorMessage(ERR_MSG_READ);
     return -1;
@@ -715,4 +722,25 @@ static void moveFileToListHead(OFile *ofile)
     ofile->prev = NULL;
     FileListHead=ofile;
   }
+}
+
+/*
+ * printBufferList -- バッファのリストの内容の出力(テスト用)
+ */
+void printBufferList()
+{
+    Buffer *buf;
+
+    printf("Buffer List:");
+
+    /* それぞれのバッファの最初の3バイトだけ出力する */
+    for (buf = bufferListHead; buf != NULL; buf = buf->next) {
+      if (buf->file == NULL) {
+        printf("(empty) ");
+      } else {
+        printf("    %c%c%c ", buf->page[0], buf->page[1], buf->page[2]);
+      }
+    }
+
+    printf("\n");
 }

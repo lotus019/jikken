@@ -2,6 +2,7 @@
  * file.c -- ファイルアクセスモジュール 
  */
 
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -70,6 +71,7 @@ struct Buffer {
 static Result initializeBufferList();
 static Result finalizeBufferList();
 static void moveBufferToListHead(Buffer *buf);
+void printBufferList();
 
 /*
  * bufferListHead -- LRUリストの先頭へのポインタ
@@ -229,7 +231,8 @@ Result closeFile(File *file)
         printErrorMessage(ERR_MSG_WRITE);
         return NG;
       }
-      buf->modified=UNMODIFIED;  
+      buf->modified=UNMODIFIED; 
+      buf->file=NULL; 
     }
     buf=buf->next;
   }
@@ -273,7 +276,7 @@ Result readPage(File *file, int pageNum, char *page)
       moveBufferToListHead(buf);
       return OK;
     }
-    if (buf->modified==UNMODIFIED && emptyBuffer==NULL){
+    if (buf->file==NULL && emptyBuffer==NULL){
       emptyBuffer = buf;
     }
     buf=buf->next;
@@ -351,7 +354,7 @@ Result writePage(File *file, int pageNum, char *page)
       moveBufferToListHead(buf);
       return OK;
     }
-    if (buf->modified==UNMODIFIED && emptyBuffer==NULL){
+    if (buf->file==NULL && emptyBuffer==NULL){
       emptyBuffer = buf;
     }
     buf=buf->next;
@@ -500,6 +503,7 @@ static Result finalizeBufferList()
     }
 
     nbuffer=buf->next;
+    free(buf->file);
     free(buf);
     buf=nbuffer;
     bufferListHead=buf;
@@ -536,4 +540,25 @@ static void moveBufferToListHead(Buffer *buf)
     buf->prev = NULL;
     bufferListHead=buf;
   }
+}
+
+/*
+ * printBufferList -- バッファのリストの内容の出力(テスト用)
+ */
+void printBufferList()
+{
+    Buffer *buf;
+
+    printf("Buffer List:");
+
+    /* それぞれのバッファの最初の3バイトだけ出力する */
+    for (buf = bufferListHead; buf != NULL; buf = buf->next) {
+  if (buf->file == NULL) {
+      printf("(empty) ");
+  } else {
+      printf("    %c%c%c ", buf->page[0], buf->page[1], buf->page[2]);
+  }
+    }
+
+    printf("\n");
 }

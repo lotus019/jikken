@@ -6,7 +6,7 @@ CFLAGS = -g
 all: microdb all-test
 
 # すべてのテストプログラムを作るルール
-all-test: test-file test-datadef test-datamanip
+all-test: test-file test-datadef test-datamanip test-buffer
 
 # すべてのテストプログラムを実行するルール
 do-test: test-file test-datadef test-datamanip
@@ -49,6 +49,11 @@ test-datamanip.o: test-datamanip.c microdb.h
 test-datamanip: test-datamanip.o datadef.o datamanip.o file.o
 	$(CC) -o test-datamanip $(CFLAGS) test-datamanip.o datadef.o datamanip.o file.o
 
+test-buffer: test-buffer.o file.o
+	$(CC) -o test-buffer $(CFLAGS) test-buffer.o file.o
+
+test-buffer.o: test-buffer.c microdb.h
+	$(CC) -o test-buffer.o $(CFLAGS) -c test-buffer.c
 
 clean:
 	rm -f *.o

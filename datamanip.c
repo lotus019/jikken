@@ -163,6 +163,7 @@ Result insertRecord(char *tableName, RecordData *recordData)
     /* データファイルのページ数を調べる */
     numPage = getNumPages(filename);
 
+
     /* レコードを挿入できる場所を探す */
     for (i = 0; i < numPage; i++) {
         /* 1ページ分のデータを読み込む */

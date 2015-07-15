@@ -581,6 +581,17 @@ void callSelectRecord()
 
   /* selectの次のトークンを読み込み、それが"*"かどうかをチェック */
   token = getNextToken();
+  if (token == NULL ) {
+    /* 文法エラー */
+    printf("入力行に間違いがあります。\n");
+    return;
+  }
+  if (strcmp(token, "distinct") == 0){
+    condition->distinct=DISTINCT;
+    token = getNextToken();
+  }else{
+    condition->distinct=NOT_DISTINCT;
+  }
   if (token == NULL || strcmp(token, "*") != 0) {
     /* 文法エラー */
     printf("入力行に間違いがあります。\n");

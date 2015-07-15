@@ -118,6 +118,11 @@ enum OperatorType {
 #define CON_SIZE 10
 
 /*
+ * distinctFlag -- 重複除去フラグ
+ */
+typedef enum { NOT_DISTINCT = 0, DISTINCT = 1 } distinctFlag;
+
+/*
  * Condition -- 検索や削除の条件式を表現する構造体
  */
 typedef struct Condition Condition;
@@ -128,6 +133,7 @@ struct Condition {
     ValueSet valueSet; /*データを納める共用体*/
     struct Condition *andCondition;
     struct Condition *orCondition;
+    distinctFlag distinct;      /* 重複除去フラグ */
 };
 
 
@@ -168,3 +174,4 @@ extern Result createDataFile(char *tableName);
 extern Result deleteDataFile(char *tableName);
 extern void printTableData(char *tableName);
 extern void printRecordSet(RecordSet *recordSet);
+extern int compare(RecordData *record1,RecordData *record2);

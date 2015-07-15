@@ -389,10 +389,10 @@ static Result checkCondition(RecordData *recordData, Condition *condition)
  */
 RecordSet *selectRecord(char *tableName, Condition *condition)
 {
-  int i,j,k,l=0,len,recordSize;
+  int i,j,k,l=0,len,recordSize,com;
   char *filename;
   File *file;
-  RecordData *p;
+  RecordData *p,*list;
   char page[PAGE_SIZE]={0};
   RecordSet *recordSet;
   TableInfo *tableInfo;
@@ -472,16 +472,29 @@ RecordSet *selectRecord(char *tableName, Condition *condition)
             return NULL;
         }
       }
-
       /*写されたデータが条件に一致したら、レコードの集合に追加する*/
-      if (checkCondition(record,condition)==OK){
+      if (checkCondition(record,condition)==OK){    
         if (recordSet->recordData==NULL){
           recordSet->recordData = record;
           record->next = NULL;
         }else{
-          p = recordSet->recordData;
-          recordSet->recordData = record;
-          record->next = p;  
+          com = 0;
+          if (condition->distinct==DISTINCT){
+            list=recordSet->recordData;
+            while(list!= NULL){
+              if((com=compare(record,list))==1){
+                break;   
+              }
+              list=list->next;
+            }
+          }
+          if (com==0){
+            p = recordSet->recordData;
+            recordSet->recordData = record;
+            record->next = p;      
+          }else{
+            free(record);
+          }
         }
         l++;
         recordSet->numRecord= l ;
@@ -497,6 +510,34 @@ RecordSet *selectRecord(char *tableName, Condition *condition)
 
 }
 
+
+/*
+ * checkCondition -- レコードが条件を満足するかどうかのチェック
+ *
+ * 引数:
+ *  recordData: チェックするレコード
+ *  condition: チェックする条件
+ *
+ * 返り値:
+ *  レコードrecordが条件conditionを満足すればOK、満足しなければNGを返す
+ */
+int compare(RecordData *record1,RecordData *record2){
+  int i;
+
+  for (i = 0; i < record1->numField; i++){
+    if (record1->fieldData[i].dataType==TYPE_INTEGER){
+      if (record1->fieldData[i].valueSet.intValue != record2->fieldData[i].valueSet.intValue){
+        return 0;       
+      }     
+    }else if(record1->fieldData[i].dataType==TYPE_STRING){
+      if(strcmp(record1->fieldData[i].valueSet.stringValue,record2->fieldData[i].valueSet.stringValue)!=0){
+        return 0;
+      }
+    }  
+  }
+
+  return 1;
+}
 
 
 /*
@@ -615,7 +656,7 @@ Result deleteRecord(char *tableName, Condition *condition)
               return NG;
           }
         }
-        
+
         /*写されたデータが条件に一致したら、フラグを0にする*/
         if (checkCondition(record,condition)==OK){
           *p = 0;

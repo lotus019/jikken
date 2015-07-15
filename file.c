@@ -95,7 +95,6 @@ struct OFile {
 };
 
 static Result initializeFileList();
-static Result finalizeFileList();
 static void moveFileToListHead(OFile *ofile);
 
 /*
@@ -209,6 +208,7 @@ Result deleteFile(char *filename)
 
   return OK;
 }
+
 
 /*
  * openFile --　ファイルのオープン
@@ -384,6 +384,8 @@ Result writePage(File *file, int pageNum, char *page)
   int i;
   Buffer *buf=bufferListHead;
   Buffer *emptyBuffer=NULL;
+
+
   /*バッファの中にページがあるか探す*/
   for (i = 0; i < NUM_BUFFER; i++){
     if (buf->pageNum==pageNum && file==buf->file){
@@ -661,38 +663,7 @@ static Result initializeFileList()
   return OK;
 }
 
-/*
- * finalizeBufferList -- バッファリストの終了処理
- *
- * **注意**
- *  この関数は、ファイルアクセスモジュールの使用後に必ず一度だけ呼び出すこと。
- *  (finalizeFileModule()から呼び出すこと。)
- *
- * 引数:
- *  なし
- *
- * 返り値:
- *  終了処理に成功すればOK、失敗すればNGを返す。
- */
-static Result finalizeFileList()
-{      
-  int i;
-  Buffer *buf=bufferListHead;   
-  Buffer *nbuffer = NULL;
-  for (i = 0; i < NUM_BUFFER; i++){
-    if (buf->modified==1){
-      if(writePage(buf->file,buf->pageNum,buf->page)==NG){
-        return NG;
-      }        
-    }
 
-    nbuffer=buf->next;
-    free(buf);
-    buf=nbuffer;
-    bufferListHead=buf;
-  }
-  return OK;
-}
 
 /*
  * moveBufferToListHead -- バッファをリストの先頭へ移動

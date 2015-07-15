@@ -87,6 +87,7 @@ Result test2()
     condition.dataType = TYPE_INTEGER;
     condition.operator = OPR_EQUAL;
     condition.valueSet.intValue = 4;
+    condition.distinct = DISTINCT;
     strcpy(condition4.name, "age");
 
     condition4.dataType = TYPE_INTEGER;
@@ -107,8 +108,10 @@ Result test2()
     condition3.operator = OPR_NOT_EQUAL;
     strcpy(condition3.valueSet.stringValue, "Mickey");
     condition.orCondition=&condition3;
+    condition.andCondition=NULL;
     condition3.orCondition=NULL;
     condition3.andCondition=NULL;
+
 
     if ((recordSet = selectRecord(TABLE_NAME, &condition)) == NULL) {
 	fprintf(stderr, "Cannot select records.\n");
@@ -163,13 +166,13 @@ Result test3()
     strcpy(condition.name, "name");
     condition.dataType = TYPE_STRING;
     condition.operator = OPR_NOT_EQUAL;
+    condition.orCondition=NULL;
+    condition.andCondition=NULL;
     strcpy(condition.valueSet.stringValue, "Mickey");
-
     if (deleteRecord(TABLE_NAME, &condition) != OK) {
 	fprintf(stderr, "Cannot delete records.\n");
 	return NG;
     }
-
     /* データを表示する */
     printTableData(TABLE_NAME);
 

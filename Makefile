@@ -22,8 +22,8 @@ microdb:main.o file.o datadef.o datamanip.o
 main.o: main.c microdb.h
 	$(CC) -o main.o $(CFLAGS) -c main.c
 
-file.o: file.c microdb.h
-	$(CC) -o file.o $(CFLAGS) -c file.c
+file.o: file2.c microdb.h
+	$(CC) -o file.o $(CFLAGS) -c file2.c
 
 test-file: test-file.o file.o
 	$(CC) -o test-file $(CFLAGS) test-file.o file.o
@@ -43,8 +43,8 @@ test-datadef: test-datadef.o datadef.o datamanip.o file.o
 datamanip.o: datamanip.c microdb.h
 	$(CC) -o datamanip.o $(CFLAGS) -c datamanip.c
 
-test-datamanip.o: test-datamanip.c microdb.h
-	$(CC) -o test-datamanip.o $(CFLAGS) -c test-datamanip.c
+test-datamanip.o: test-datamanip2.c microdb.h
+	$(CC) -o test-datamanip.o $(CFLAGS) -c test-datamanip2.c
 
 test-datamanip: test-datamanip.o datadef.o datamanip.o file.o
 	$(CC) -o test-datamanip $(CFLAGS) test-datamanip.o datadef.o datamanip.o file.o
